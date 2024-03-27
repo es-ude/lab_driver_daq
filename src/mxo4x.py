@@ -1,46 +1,78 @@
 import numpy as np
 from time import sleep
-from src.usb_serial import com_usb
+import pyvisa
 
-class DriverMXO4X:
-    """Class for Remote Controlling the Mixed Signal Osciloscpe R&S MXO4x via USB"""
 
-    def __init__(self, com_name: str, num_ch=3):
-        """Initizialization of Power Supply Device with BAUD=9600(com_name, num_of_channels)"""
-        self.__NoChannels = num_ch
-        self.SerialDevice = com_usb(com_name, 9600)
-        self.SerialActive = False
-        self.ChannelUsed = [False, False, False, False]
-        self.ID_Device = str()
+def scan_instruments() -> None:
+    """Scanning the VISA bus for instruments"""
+    rm = pyvisa.ResourceManager()
+    print("\nAvailable VISA driver:")
+    print(rm)
+    print("\nAvailable devices")
+    print("--------------------------------------")
+    obj_inst = rm.list_resources()
+    for idx, inst_name in enumerate(obj_inst):
+        inst0 = rm.open_resource(inst_name)
+        id = inst0.query("*IDN?")
+        for ite in range(4):
+            inst0.write("SYST:BEEP")
+            sleep(0.5)
+        inst0.close()
+        print(f"{idx}: {inst_name} --> {id}")
 
-    def __write_to_dev(self, text: str) -> None:
-        self.SerialDevice.write_wofb(bytes(text + '\n', 'utf-8'))
 
-    def __read_from_dev(self, text: str) -> str:
-        text_out = str(self.SerialDevice.write_wfb_lf(bytes(text + '\n', 'utf-8')), 'UTF-8')
+class MXO4X:
+    """Class for handling the Rohde and Schwarz Mixed-Signal Oscilloscope MXO44 in Python"""
+    SerialDevice: pyvisa.Resource
+    SerialActive = False
+
+    def __init__(self):
+        pass
+
+    def __write_to_dev(self, order: str) -> None:
+        self.SerialDevice.write(order)
+
+    def __read_from_dev(self, order: str) -> str:
+        text_out = self.SerialDevice.query(order)
         return text_out
 
-    def start_serial(self):
-        """Open the serial connection to MXO4X"""
-        self.SerialDevice.setup_usb()
-
-        self.SerialDevice.open()
+    def start_serial(self, resource_name: str):
+        """Open the serial connection to HMP40X0"""
+        rm = pyvisa.ResourceManager()
+        self.SerialDevice = rm.open_resource(resource_name)
         self.SerialActive = True
 
+        self.do_reset()
         self.__write_to_dev("SYST:MIX")
+        self.do_check_idn()
 
     def close_serial(self):
-        """Closing the serial connection to HMP4030"""
+        """Closing the serial connection"""
         self.SerialDevice.close()
         self.SerialActive = False
 
     def do_reset(self) -> None:
-        """Reset the MXO44"""
+        """Reset the device"""
         self.__write_to_dev("*RST")
         sleep(5)
+        self.do_beep()
 
     def do_check_idn(self) -> None:
-        """Checking the IDN of MXO44"""
-        # returned "Rohde&Schwarz,<device type>,<part number>/<serial number>,<firmware version>"
+        """Checking the IDN"""
         self.ID_Device = self.__read_from_dev("*IDN?")
         print(self.ID_Device)
+
+    def do_beep(self) -> None:
+        """Doing a single beep on device"""
+        for ite in range(0, 1):
+            self.__write_to_dev("SYST:BEEP")
+            sleep(2)
+
+
+if __name__ == "__main__":
+    scan_instruments()
+
+    sleep(1)
+    inst0 = MXO4X()
+    inst0.start_serial('ASRL6::INSTR')
+    inst0.do_beep()

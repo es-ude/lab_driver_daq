@@ -1,38 +1,54 @@
 import numpy as np
 from time import sleep
-from src.usb_serial import com_usb
+import pyvisa
+
+
+def scan_instruments() -> None:
+    """Scanning the VISA bus for instruments"""
+    rm = pyvisa.ResourceManager()
+    print("\nAvailable VISA driver:")
+    print(rm)
+    print("\nAvailable devices")
+    print("--------------------------------------")
+    obj_inst = rm.list_resources()
+    for idx, inst_name in enumerate(obj_inst):
+        inst0 = rm.open_resource(inst_name)
+        id = inst0.query("*IDN?")
+        for ite in range(4):
+            inst0.write("SYST:BEEP")
+            sleep(0.5)
+        inst0.close()
+        print(f"{idx}: {inst_name} --> {id}")
 
 
 class DriverHMP40X0:
     """Class for Remote Controlling the Power Supply R&S HMP40X0 via USB"""
+    SerialDevice: pyvisa.Resource
 
-    def __init__(self, com_name: str, num_ch=3):
+    def __init__(self, num_ch=4):
         """Initizialization of Power Supply Device with BAUD=9600(com_name, num_of_channels)"""
         self.__NoChannels = num_ch
-        self.SerialDevice = com_usb(com_name, 9600)
         self.SerialActive = False
         self.ChannelUsed = [False, False, False, False]
         self.ID_Device = str()
-        self.SetCH1 = ChannelInfoHMP40X0(0)
-        self.SetCH2 = ChannelInfoHMP40X0(1)
-        self.SetCH3 = ChannelInfoHMP40X0(2)
-        self.SetCH4 = ChannelInfoHMP40X0(3)
+        self.SetCH = [ChannelInfoHMP40X0(idx) for idx in range(num_ch)]
 
-    def __write_to_dev(self, text: str) -> None:
-        self.SerialDevice.write_wofb(bytes(text + '\n', 'utf-8'))
+    def __write_to_dev(self, order: str) -> None:
+        self.SerialDevice.write(order)
 
-    def __read_from_dev(self, text: str) -> str:
-        text_out = str(self.SerialDevice.write_wfb_lf(bytes(text + '\n', 'utf-8')), 'utf-8')
+    def __read_from_dev(self, order: str) -> str:
+        text_out = self.SerialDevice.query(order)
         return text_out
 
-    def start_serial(self):
+    def start_serial(self, resource_name: str):
         """Open the serial connection to HMP40X0"""
-        self.SerialDevice.setup_usb()
-
-        self.SerialDevice.open()
+        rm = pyvisa.ResourceManager()
+        self.SerialDevice = rm.open_resource(resource_name)
         self.SerialActive = True
 
+        self.do_reset()
         self.__write_to_dev("SYST:MIX")
+        self.do_check_idn()
 
     def close_serial(self):
         """Closing the serial connection to HMP40X0"""
@@ -60,37 +76,15 @@ class DriverHMP40X0:
     def ch_read_parameter(self, sel_ch: int) -> [float, float]:
         """Read sense parameter from HMP40X0"""
         text = []
-        if sel_ch == 0:
-            text.append(self.SetCH1.sel_ch())
-            text.append(self.SetCH1.read_ch_voltage())
-            text.append(self.SetCH1.read_ch_current())
-        if sel_ch == 1:
-            text.append(self.SetCH2.sel_ch())
-            text.append(self.SetCH2.read_ch_voltage())
-            text.append(self.SetCH2.read_ch_current())
-        if sel_ch == 2:
-            text.append(self.SetCH3.sel_ch())
-            text.append(self.SetCH3.read_ch_voltage())
-            text.append(self.SetCH3.read_ch_current())
-        if sel_ch == 3:
-            text.append(self.SetCH4.sel_ch())
-            text.append(self.SetCH4.read_ch_voltage())
-            text.append(self.SetCH4.read_ch_current())
-
+        text.append(self.SetCH[sel_ch].sel_ch())
+        text.append(self.SetCH[sel_ch].read_ch_voltage())
+        text.append(self.SetCH[sel_ch].read_ch_current())
         # Getting the information
         self.__write_to_dev(text[0])
         volt = float(self.__read_from_dev(text[1]))
         curr = float(self.__read_from_dev(text[2]))
-
         # Right-back information
-        if sel_ch == 0:
-            self.SetCH1.set_sense_parameter(volt, curr)
-        if sel_ch == 1:
-            self.SetCH2.set_sense_parameter(volt, curr)
-        if sel_ch == 2:
-            self.SetCH3.set_sense_parameter(volt, curr)
-        if sel_ch == 3:
-            self.SetCH4.set_sense_parameter(volt, curr)
+        self.SetCH[sel_ch].set_sense_parameter(volt, curr)
 
         return volt, curr
 
@@ -112,83 +106,41 @@ class DriverHMP40X0:
     def afg_start(self) -> None:
         """Starting the Arbitrary Generator on the configured channel"""
         text = str()
-        if self.SetCH1.ChannelUsedAFG:
-            text = self.SetCH1.set_arbitrary_start()
-        elif self.SetCH2.ChannelUsedAFG:
-            text = self.SetCH2.set_arbitrary_start()
-        elif self.SetCH3.ChannelUsedAFG:
-            text = self.SetCH3.set_arbitrary_start()
-        elif self.SetCH4.ChannelUsedAFG:
-            text = self.SetCH4.set_arbitrary_start()
-
+        for idx in range(self.__NoChannels):
+            if self.SetCH[idx].ChannelUsedAFG:
+                text = self.SetCH[idx].set_arbitrary_start()
         self.__write_to_dev(text)
 
     def afg_stop(self) -> None:
         """Stopping the Arbitrary Generator on the configured channel"""
         text = str()
-        if self.SetCH1.ChannelUsedAFG:
-            text = self.SetCH1.set_arbitrary_stop()
-        elif self.SetCH2.ChannelUsedAFG:
-            text = self.SetCH2.set_arbitrary_stop()
-        elif self.SetCH3.ChannelUsedAFG:
-            text = self.SetCH3.set_arbitrary_stop()
-        elif self.SetCH4.ChannelUsedAFG:
-            text = self.SetCH4.set_arbitrary_stop()
-
+        for idx in range(self.__NoChannels):
+            if self.SetCH[idx].ChannelUsedAFG:
+                text = self.SetCH[idx].set_arbitrary_stop()
         self.__write_to_dev(text)
 
     def ch_set_parameter(self, sel_ch: int, volt: float, cur: float) -> None:
         """Set parameters I/V of each channel"""
         text = []
-        if sel_ch == 0:
-            text.append(self.SetCH1.sel_ch())
-            text.append(self.SetCH1.set_ch_voltage(volt))
-            text.append(self.SetCH1.set_ch_current_limit(cur))
-            text.append(self.SetCH1.set_ch_output())
-        elif sel_ch == 1:
-            text.append(self.SetCH2.sel_ch())
-            text.append(self.SetCH2.set_ch_voltage(volt))
-            text.append(self.SetCH2.set_ch_current_limit(cur))
-            text.append(self.SetCH2.set_ch_output())
-        elif sel_ch == 2:
-            text.append(self.SetCH3.sel_ch())
-            text.append(self.SetCH3.set_ch_voltage(volt))
-            text.append(self.SetCH3.set_ch_current_limit(cur))
-            text.append(self.SetCH3.set_ch_output())
-        elif sel_ch == 3:
-            text.append(self.SetCH4.sel_ch())
-            text.append(self.SetCH4.set_ch_voltage(volt))
-            text.append(self.SetCH4.set_ch_current_limit(cur))
-            text.append(self.SetCH4.set_ch_output())
+        text.append(self.SetCH[sel_ch].sel_ch())
+        text.append(self.SetCH[sel_ch].set_ch_voltage(volt))
+        text.append(self.SetCH[sel_ch].set_ch_current_limit(cur))
+        text.append(self.SetCH[sel_ch].set_ch_output())
 
         # Configuring the channels
-        for idx in range(0, 4):
-            self.__write_to_dev(text[idx])
+        for string in text:
+            self.__write_to_dev(string)
 
     def afg_set_waveform(self, sel_ch: int, voltage: np.ndarray, current: np.ndarray, time: np.ndarray, num_cycles=0):
         """Set arbitrary waveform of the selected channel (max. 128 points)"""
         text = []
-        if sel_ch == 0:
-            text.append(self.SetCH1.set_arbitrary_waveform(voltage, current, time))
-            text.append(self.SetCH1.set_arbitrary_repetition(num_cycles))
-            text.append(self.SetCH1.set_arbitrary_transfer())
-        if sel_ch == 1:
-            text.append(self.SetCH2.set_arbitrary_waveform(voltage, current, time))
-            text.append(self.SetCH2.set_arbitrary_repetition(num_cycles))
-            text.append(self.SetCH2.set_arbitrary_transfer())
-        if sel_ch == 2:
-            text.append(self.SetCH3.set_arbitrary_waveform(voltage, current, time))
-            text.append(self.SetCH3.set_arbitrary_repetition(num_cycles))
-            text.append(self.SetCH3.set_arbitrary_transfer())
-        if sel_ch == 3:
-            text.append(self.SetCH4.set_arbitrary_waveform(voltage, current, time))
-            text.append(self.SetCH4.set_arbitrary_repetition(num_cycles))
-            text.append(self.SetCH4.set_arbitrary_transfer())
+        text.append(self.SetCH[sel_ch].set_arbitrary_waveform(voltage, current, time))
+        text.append(self.SetCH[sel_ch].set_arbitrary_repetition(num_cycles))
+        text.append(self.SetCH[sel_ch].set_arbitrary_transfer())
 
         # Configuring the channels
-        for idx in range(0, 3):
-            self.__write_to_dev(text[idx])
-
+        for string in text:
+            self.__write_to_dev(string)
 
 
 class ChannelInfoHMP40X0:
@@ -288,3 +240,13 @@ class ChannelInfoHMP40X0:
 
     def set_arbitrary_stop(self) -> str:
         return "ARB:STOP " + str(self.ChannelNumber)
+
+
+if __name__ == "__main__":
+    scan_instruments()
+
+    sleep(1)
+    inst_dev = DriverHMP40X0()
+    inst_dev.start_serial('ASRL4::INSTR')
+    inst_dev.do_beep()
+    inst_dev.ch_set_parameter(0, 1.6, 10e-3)

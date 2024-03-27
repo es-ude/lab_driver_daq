@@ -1,3 +1,5 @@
 numpy
 pyvisa
+pyvisa-py
+zeroconf
 pyserial
