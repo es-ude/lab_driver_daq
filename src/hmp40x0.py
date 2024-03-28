@@ -3,22 +3,24 @@ from time import sleep
 import pyvisa
 
 
-def scan_instruments() -> None:
+def scan_instruments(get_id=False) -> None:
     """Scanning the VISA bus for instruments"""
     rm = pyvisa.ResourceManager()
-    print("\nAvailable VISA driver:")
-    print(rm)
+    print(f"\nAvailable VISA driver: {rm}")
     print("\nAvailable devices")
     print("--------------------------------------")
     obj_inst = rm.list_resources()
     for idx, inst_name in enumerate(obj_inst):
-        inst0 = rm.open_resource(inst_name)
-        id = inst0.query("*IDN?")
-        for ite in range(4):
-            inst0.write("SYST:BEEP")
-            sleep(0.5)
-        inst0.close()
-        print(f"{idx}: {inst_name} --> {id}")
+        if get_id:
+            inst0 = rm.open_resource(inst_name)
+            id = " --> " + inst0.query("*IDN?")
+            for ite in range(4):
+                inst0.write("SYST:BEEP")
+                sleep(0.5)
+            inst0.close()
+        else:
+            id = ""
+        print(f"{idx}: {inst_name}{id}")
 
 
 class DriverHMP40X0:
