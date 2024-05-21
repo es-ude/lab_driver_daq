@@ -1,4 +1,3 @@
-import numpy as np
 from time import sleep
 import pyvisa
 
@@ -55,28 +54,32 @@ class DriverDMM6500:
         else:
             self.SerialActive = False
 
-    def start_serial_known_target(self, resource_name: str, do_reset=False) -> None:
-        """Open the serial connection to device"""
+    def serial_start_known_target(self, resource_name: str, do_reset=False) -> None:
+        """Open the serial connection to device directly"""
         rm = pyvisa.ResourceManager()
         self.SerialDevice = rm.open_resource(resource_name)
 
         self.__do_check_idn()
         self.__init_dev(do_reset)
 
-    def start_serial(self, do_reset=False) -> None:
+    def serial_start(self, do_reset=False) -> None:
         """Open the serial connection to device"""
-        list_dev = scan_instruments(False)
+        list_dev = scan_instruments()
+        rm = pyvisa.ResourceManager()
 
+        # --- Checking if device address is right
         for inst_name in list_dev:
-            rm = pyvisa.ResourceManager()
             self.SerialDevice = rm.open_resource(inst_name)
             self.__do_check_idn()
             if self.SerialActive:
                 break
+            else:
+                self.serial_close()
 
+        # --- Init of device
         self.__init_dev(do_reset)
 
-    def close_serial(self) -> None:
+    def serial_close(self) -> None:
         """Closing the serial connection"""
         self.SerialDevice.close()
         self.SerialActive = False

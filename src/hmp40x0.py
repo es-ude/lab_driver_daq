@@ -57,7 +57,7 @@ class DriverHMP40X0:
         else:
             self.SerialActive = False
 
-    def start_serial_known_target(self, resource_name: str, do_reset=False) -> None:
+    def serial_open_known_target(self, resource_name: str, do_reset=False) -> None:
         """Open the serial connection to device"""
         rm = pyvisa.ResourceManager()
         self.SerialDevice = rm.open_resource(resource_name)
@@ -65,20 +65,24 @@ class DriverHMP40X0:
         self.__do_check_idn()
         self.__init_dev(do_reset)
 
-    def start_serial(self, do_reset=False) -> None:
+    def serial_open(self, do_reset=False) -> None:
         """Open the serial connection to device"""
         list_dev = scan_instruments()
+        rm = pyvisa.ResourceManager()
 
+        # --- Checking if device address is right
         for inst_name in list_dev:
-            rm = pyvisa.ResourceManager()
             self.SerialDevice = rm.open_resource(inst_name)
             self.__do_check_idn()
             if self.SerialActive:
                 break
+            else:
+                self.serial_close()
 
+        # --- Init of device
         self.__init_dev(do_reset)
 
-    def close_serial(self) -> None:
+    def serial_close(self) -> None:
         """Closing the serial connection"""
         self.SerialDevice.close()
         self.SerialActive = False
@@ -113,7 +117,7 @@ class DriverHMP40X0:
         if not self.SerialActive:
             print("... not done due to wrong device")
         else:
-            text = []
+            text = list()
             text.append(self.SetCH[sel_ch].sel_ch())
             text.append(self.SetCH[sel_ch].read_ch_voltage())
             text.append(self.SetCH[sel_ch].read_ch_current())
@@ -302,7 +306,7 @@ if __name__ == "__main__":
     scan_instruments()
 
     inst_dev = DriverHMP40X0()
-    inst_dev.start_serial()
+    inst_dev.serial_open()
     inst_dev.do_beep()
     inst_dev.ch_set_parameter(0, 1.6, 10e-3)
     inst_dev.output_activate()
