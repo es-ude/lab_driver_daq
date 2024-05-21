@@ -2,16 +2,19 @@ from time import sleep
 import pyvisa
 
 
-def scan_instruments() -> list:
+def scan_instruments(do_print=True) -> list:
     """Scanning the VISA bus for instruments"""
     rm = pyvisa.ResourceManager()
-    print(f"\nAvailable VISA driver: {rm}")
-    print("\nAvailable devices")
-    print("--------------------------------------")
     obj_inst = rm.list_resources()
+
     out_dev_adr = list()
     for idx, inst_name in enumerate(obj_inst):
-        print(f"{idx}: {inst_name}")
+        if idx == 0 and do_print:
+            print(f"\nUsing VISA driver: {rm}")
+            print("Available devices")
+            print("--------------------------------------")
+        elif do_print:
+            print(f"{idx}: {inst_name}")
         out_dev_adr.append(inst_name)
     return out_dev_adr
 
