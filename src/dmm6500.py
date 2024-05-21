@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
     # scan_instruments()
     dev = DriverDMM6500()
-    dev.start_serial()
+    dev.serial_start()
     dev.do_reset()
     #dev.set_measurement_mode(0)
     sleep(1)
