@@ -87,12 +87,6 @@ class NGUX01:
         self.SerialDevice.close()
         self.SerialActive = False
 
-    def do_reset(self) -> None:
-        """Reset the device"""
-        self.__write_to_dev("*RST")
-        sleep(5)
-        self.do_beep()
-
     def get_id(self, do_print=True) -> str:
         """Getting the device ID"""
         id = self.__read_from_dev("*IDN?")
@@ -102,9 +96,21 @@ class NGUX01:
 
     def do_beep(self, num_iterations=1) -> None:
         """Doing a single beep on device"""
-        for ite in range(0, num_iterations):
-            self.__write_to_dev("SYST:BEEP")
-            sleep(1)
+        if not self.SerialActive:
+            print("... not done due to wrong device")
+        else:
+            for ite in range(0, num_iterations):
+                self.__write_to_dev("SYST:BEEP")
+                sleep(1)
+
+    def do_reset(self) -> None:
+        """Reset the device"""
+        if not self.SerialActive:
+            print("... not done due to wrong device")
+        else:
+            self.__write_to_dev("*RST")
+            sleep(2)
+            self.do_beep()
 
     def do_get_system_runtime(self) -> None:
         """Getting the actual runtime of device in seconds"""
@@ -242,3 +248,4 @@ if __name__ == "__main__":
 
     dev = NGUX01()
     dev.start_serial()
+    dev.do_reset()
