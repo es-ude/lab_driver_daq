@@ -110,7 +110,6 @@ class NGUX01:
         """Getting the actual runtime of device in seconds"""
         if not self.SerialActive:
             print("... not done due to wrong device")
-            return 0.0
         else:
             runtime = int(self.__read_from_dev('SYST:UPT?'))
             print(f"Actual runtime: {runtime / 60:.3f} sec")
@@ -119,7 +118,6 @@ class NGUX01:
         """Getting the actual system time of device """
         if not self.SerialActive:
             print("... not done due to wrong device")
-            return 0.0
         else:
             time = self.__read_from_dev('SYST:TIME?').split(',')
             print(f"System time: {int(time[0]):02d}:{int(time[1]):02d},{int(time[2]):02d}")
@@ -128,7 +126,6 @@ class NGUX01:
         """Setting the channel voltage value"""
         if not self.SerialActive:
             print("... not done due to wrong device")
-            return 0.0
         else:
             val_set = val if val > self._volt_range[0] else self._volt_range[0]
             val_set = val_set if val <= self._volt_range[1] else self._volt_range[1]
@@ -138,7 +135,6 @@ class NGUX01:
         """Setting the channel voltage value"""
         if not self.SerialActive:
             print("... not done due to wrong device")
-            return 0.0
         else:
             val_set = val if val > self._curr_range[0] else self._curr_range[0]
             val_set = val_set if val <= self._curr_range[1] else self._curr_range[1]
@@ -148,7 +144,6 @@ class NGUX01:
         """Setting the current limitations value"""
         if not self.SerialActive:
             print("... not done due to wrong device")
-            return 0.0
         else:
             self.__write_to_dev(f"CURR:ALIM {val_max:.4f}")
             sleep(0.5)
@@ -159,7 +154,6 @@ class NGUX01:
         """Setting the output impedance of device"""
         if not self.SerialActive:
             print("... not done due to wrong device")
-            return 0.0
         else:
             self.__write_to_dev(f"OUTP:IMP {resistance:.5f}")
 
@@ -167,7 +161,6 @@ class NGUX01:
         """Setting the output mode [0: Auto, 1: Sink, 2: Source]"""
         if not self.SerialActive:
             print("... not done due to wrong device")
-            return 0.0
         else:
             if mode == 0:
                 str_out = 'AUTO'
@@ -181,7 +174,6 @@ class NGUX01:
         """Activating the output"""
         if not self.SerialActive:
             print("... not done due to wrong device")
-            return 0.0
         else:
             self.__write_to_dev(f"OUTP:FTR {1 if use_fast_output else 0}")
             sleep(0.5)
@@ -194,7 +186,6 @@ class NGUX01:
         """Deactivating the output"""
         if not self.SerialActive:
             print("... not done due to wrong device")
-            return 0.0
         else:
             self.__write_to_dev(f"OUTP:SEL 0")
             sleep(0.5)
