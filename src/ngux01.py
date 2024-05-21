@@ -67,7 +67,7 @@ class DriverNGUX01:
         for inst_name in list_dev:
             rm = pyvisa.ResourceManager()
             self.SerialDevice = rm.open_resource(inst_name)
-            self.__do_check_idn(False)
+            self.__do_check_idn()
             if self.SerialActive:
                 break
 

@@ -3,30 +3,25 @@ from time import sleep
 import pyvisa
 
 
-def scan_instruments(get_id=False) -> None:
+def scan_instruments() -> list:
     """Scanning the VISA bus for instruments"""
     rm = pyvisa.ResourceManager()
     print(f"\nAvailable VISA driver: {rm}")
     print("\nAvailable devices")
     print("--------------------------------------")
     obj_inst = rm.list_resources()
+    out_dev_adr = list()
     for idx, inst_name in enumerate(obj_inst):
-        if get_id:
-            inst0 = rm.open_resource(inst_name)
-            id = " --> " + inst0.query("*IDN?")
-            for ite in range(4):
-                inst0.write("SYST:BEEP")
-                sleep(0.5)
-            inst0.close()
-        else:
-            id = ""
-        print(f"{idx}: {inst_name}{id}")
+        print(f"{idx}: {inst_name}")
+        out_dev_adr.append(inst_name)
+    return out_dev_adr
 
 
 class MXO4X:
     """Class for handling the Rohde and Schwarz Mixed-Signal Oscilloscope MXO44 in Python"""
     SerialDevice: pyvisa.Resource
     SerialActive = False
+    _device_name_chck = "MXO"
 
     def __init__(self):
         pass
@@ -38,43 +33,79 @@ class MXO4X:
         text_out = self.SerialDevice.query(order)
         return text_out
 
-    def start_serial(self, resource_name: str):
-        """Open the serial connection to HMP40X0"""
+    def __init_dev(self, do_reset=True):
+        """"""
+        if self.SerialActive:
+            if do_reset:
+                self.do_reset()
+            self.__write_to_dev("SYST:MIX")
+            print(f"Right device is selected with: {self.get_id(False)}")
+        else:
+            print("Not right selected device. Please check!")
+
+    def __do_check_idn(self) -> None:
+        """Checking the IDN"""
+        id_back = self.get_id(False)
+        if self._device_name_chck in id_back:
+            self.SerialActive = True
+        else:
+            self.SerialActive = False
+
+    def start_serial_known_target(self, resource_name: str, do_reset=False) -> None:
+        """Open the serial connection to device"""
         rm = pyvisa.ResourceManager()
         self.SerialDevice = rm.open_resource(resource_name)
-        self.SerialActive = True
 
-        self.do_reset()
-        self.__write_to_dev("SYST:MIX")
-        self.do_check_idn()
+        self.__do_check_idn()
+        self.__init_dev(do_reset)
 
-    def close_serial(self):
+    def start_serial(self, do_reset=False) -> None:
+        """Open the serial connection to device"""
+        list_dev = scan_instruments()
+
+        for inst_name in list_dev:
+            rm = pyvisa.ResourceManager()
+            self.SerialDevice = rm.open_resource(inst_name)
+            self.__do_check_idn()
+            if self.SerialActive:
+                break
+
+        self.__init_dev(do_reset)
+
+    def close_serial(self) -> None:
         """Closing the serial connection"""
         self.SerialDevice.close()
         self.SerialActive = False
 
+    def get_id(self, do_print=True) -> str:
+        """Getting the device ID"""
+        id = self.__read_from_dev("*IDN?")
+        if do_print:
+            print(id)
+        return id
+
+    def do_beep(self, num_iterations=1) -> None:
+        """Doing a single beep on device"""
+        if not self.SerialActive:
+            print("... not done due to wrong device")
+        else:
+            for ite in range(0, num_iterations):
+                self.__write_to_dev("SYST:BEEP")
+                sleep(1)
+
     def do_reset(self) -> None:
         """Reset the device"""
-        self.__write_to_dev("*RST")
-        sleep(5)
-        self.do_beep()
-
-    def do_check_idn(self) -> None:
-        """Checking the IDN"""
-        self.ID_Device = self.__read_from_dev("*IDN?")
-        print(self.ID_Device)
-
-    def do_beep(self) -> None:
-        """Doing a single beep on device"""
-        for ite in range(0, 1):
-            self.__write_to_dev("SYST:BEEP")
+        if not self.SerialActive:
+            print("... not done due to wrong device")
+        else:
+            self.__write_to_dev("*RST")
             sleep(2)
+            self.do_beep()
 
 
 if __name__ == "__main__":
     scan_instruments()
 
-    sleep(1)
     inst0 = MXO4X()
-    inst0.start_serial('ASRL6::INSTR')
+    inst0.start_serial()
     inst0.do_beep()
