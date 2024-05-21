@@ -3,36 +3,30 @@ from time import sleep
 import pyvisa
 
 
-def scan_instruments(get_id=False) -> None:
+def scan_instruments() -> list:
     """Scanning the VISA bus for instruments"""
     rm = pyvisa.ResourceManager()
     print(f"\nAvailable VISA driver: {rm}")
     print("\nAvailable devices")
     print("--------------------------------------")
     obj_inst = rm.list_resources()
+    out_dev_adr = list()
     for idx, inst_name in enumerate(obj_inst):
-        if get_id:
-            inst0 = rm.open_resource(inst_name)
-            id = " --> " + inst0.query("*IDN?")
-            for ite in range(4):
-                inst0.write("SYST:BEEP")
-                sleep(0.5)
-            inst0.close()
-        else:
-            id = ""
-        print(f"{idx}: {inst_name}{id}")
+        print(f"{idx}: {inst_name}")
+        out_dev_adr.append(inst_name)
+    return out_dev_adr
 
 
 class DriverHMP40X0:
     """Class for Remote Controlling the Power Supply R&S HMP40X0 via USB"""
     SerialDevice: pyvisa.Resource
+    _device_name_chck = "HMP"
 
     def __init__(self, num_ch=4):
         """Initizialization of Power Supply Device with BAUD=9600(com_name, num_of_channels)"""
         self.__NoChannels = num_ch
         self.SerialActive = False
         self.ChannelUsed = [False, False, False, False]
-        self.ID_Device = str()
         self.SetCH = [ChannelInfoHMP40X0(idx) for idx in range(num_ch)]
 
     def __write_to_dev(self, order: str) -> None:
@@ -42,107 +36,164 @@ class DriverHMP40X0:
         text_out = self.SerialDevice.query(order)
         return text_out
 
-    def start_serial(self, resource_name: str):
-        """Open the serial connection to HMP40X0"""
+    def __init_dev(self, do_reset=True):
+        """"""
+        if self.SerialActive:
+            if do_reset:
+                self.do_reset()
+            self.__write_to_dev("SYST:MIX")
+            print(f"Right device is selected with: {self.get_id(False)}")
+        else:
+            print("Not right selected device. Please check!")
+
+    def __do_check_idn(self) -> None:
+        """Checking the IDN"""
+        id_back = self.get_id(False)
+        if self._device_name_chck in id_back:
+            self.SerialActive = True
+        else:
+            self.SerialActive = False
+
+    def start_serial_known_target(self, resource_name: str, do_reset=False) -> None:
+        """Open the serial connection to device"""
         rm = pyvisa.ResourceManager()
         self.SerialDevice = rm.open_resource(resource_name)
-        self.SerialActive = True
 
-        self.do_reset()
-        self.__write_to_dev("SYST:MIX")
-        self.do_check_idn()
+        self.__do_check_idn()
+        self.__init_dev(do_reset)
 
-    def close_serial(self):
-        """Closing the serial connection to HMP40X0"""
+    def start_serial(self, do_reset=False) -> None:
+        """Open the serial connection to device"""
+        list_dev = scan_instruments()
+
+        for inst_name in list_dev:
+            rm = pyvisa.ResourceManager()
+            self.SerialDevice = rm.open_resource(inst_name)
+            self.__do_check_idn()
+            if self.SerialActive:
+                break
+
+        self.__init_dev(do_reset)
+
+    def close_serial(self) -> None:
+        """Closing the serial connection"""
         self.SerialDevice.close()
         self.SerialActive = False
 
-    def do_reset(self) -> None:
-        """Reset the HMP40X0"""
-        self.__write_to_dev("*RST")
-        sleep(5)
-        self.do_beep()
+    def get_id(self, do_print=True) -> str:
+        """Getting the device ID"""
+        id = self.__read_from_dev("*IDN?")
+        if do_print:
+            print(id)
+        return id
 
-    def do_check_idn(self) -> None:
-        """Checking the IDN of HMP40X0"""
-        # returned "Rohde&Schwarz,<device type>,<part number>/<serial number>,<firmware version>"
-        self.ID_Device = self.__read_from_dev("*IDN?")
-        print(self.ID_Device)
-
-    def do_beep(self) -> None:
+    def do_beep(self, num_iterations=1) -> None:
         """Doing a single beep on device"""
-        for ite in range(0, 1):
-            self.__write_to_dev("SYST:BEEP")
+        if not self.SerialActive:
+            print("... not done due to wrong device")
+        else:
+            for ite in range(0, num_iterations):
+                self.__write_to_dev("SYST:BEEP")
+                sleep(1)
+
+    def do_reset(self) -> None:
+        """Reset the device"""
+        if not self.SerialActive:
+            print("... not done due to wrong device")
+        else:
+            self.__write_to_dev("*RST")
             sleep(2)
+            self.do_beep()
 
     def ch_read_parameter(self, sel_ch: int) -> [float, float]:
         """Read sense parameter from HMP40X0"""
-        text = []
-        text.append(self.SetCH[sel_ch].sel_ch())
-        text.append(self.SetCH[sel_ch].read_ch_voltage())
-        text.append(self.SetCH[sel_ch].read_ch_current())
-        # Getting the information
-        self.__write_to_dev(text[0])
-        volt = float(self.__read_from_dev(text[1]))
-        curr = float(self.__read_from_dev(text[2]))
-        # Right-back information
-        self.SetCH[sel_ch].set_sense_parameter(volt, curr)
+        if not self.SerialActive:
+            print("... not done due to wrong device")
+        else:
+            text = []
+            text.append(self.SetCH[sel_ch].sel_ch())
+            text.append(self.SetCH[sel_ch].read_ch_voltage())
+            text.append(self.SetCH[sel_ch].read_ch_current())
+            # Getting the information
+            self.__write_to_dev(text[0])
+            volt = float(self.__read_from_dev(text[1]))
+            curr = float(self.__read_from_dev(text[2]))
+            # Right-back information
+            self.SetCH[sel_ch].set_sense_parameter(volt, curr)
 
-        return volt, curr
+            return volt, curr
 
     def output_activate(self) -> None:
         """Activate the already setted channels of HMP40X0"""
-        self.__write_to_dev("OUTP:GEN ON")
-        self.do_beep()
+        if not self.SerialActive:
+            print("... not done due to wrong device")
+        else:
+            self.__write_to_dev("OUTP:GEN ON")
+            self.do_beep()
 
     def output_deactivate(self) -> None:
         """Deactivate all channels of HMP40X0"""
-        self.__write_to_dev("OUTP:GEN OFF")
+        if not self.SerialActive:
+            print("... not done due to wrong device")
+        else:
+            self.__write_to_dev("OUTP:GEN OFF")
 
-        for idx in range(0, self.__NoChannels):
-            text = "INST OUT " + str(idx + 1)
-            self.__write_to_dev(text)
-            self.__write_to_dev("OUTP OFF")
-        self.do_beep()
+            for idx in range(0, self.__NoChannels):
+                text = "INST OUT " + str(idx + 1)
+                self.__write_to_dev(text)
+                self.__write_to_dev("OUTP OFF")
+            self.do_beep()
 
     def afg_start(self) -> None:
         """Starting the Arbitrary Generator on the configured channel"""
-        text = str()
-        for idx in range(self.__NoChannels):
-            if self.SetCH[idx].ChannelUsedAFG:
-                text = self.SetCH[idx].set_arbitrary_start()
-        self.__write_to_dev(text)
+        if not self.SerialActive:
+            print("... not done due to wrong device")
+        else:
+            text = str()
+            for idx in range(self.__NoChannels):
+                if self.SetCH[idx].ChannelUsedAFG:
+                    text = self.SetCH[idx].set_arbitrary_start()
+            self.__write_to_dev(text)
 
     def afg_stop(self) -> None:
         """Stopping the Arbitrary Generator on the configured channel"""
-        text = str()
-        for idx in range(self.__NoChannels):
-            if self.SetCH[idx].ChannelUsedAFG:
-                text = self.SetCH[idx].set_arbitrary_stop()
-        self.__write_to_dev(text)
+        if not self.SerialActive:
+            print("... not done due to wrong device")
+        else:
+            text = str()
+            for idx in range(self.__NoChannels):
+                if self.SetCH[idx].ChannelUsedAFG:
+                    text = self.SetCH[idx].set_arbitrary_stop()
+            self.__write_to_dev(text)
 
     def ch_set_parameter(self, sel_ch: int, volt: float, cur: float) -> None:
         """Set parameters I/V of each channel"""
-        text = []
-        text.append(self.SetCH[sel_ch].sel_ch())
-        text.append(self.SetCH[sel_ch].set_ch_voltage(volt))
-        text.append(self.SetCH[sel_ch].set_ch_current_limit(cur))
-        text.append(self.SetCH[sel_ch].set_ch_output())
+        if not self.SerialActive:
+            print("... not done due to wrong device")
+        else:
+            text = list()
+            text.append(self.SetCH[sel_ch].sel_ch())
+            text.append(self.SetCH[sel_ch].set_ch_voltage(volt))
+            text.append(self.SetCH[sel_ch].set_ch_current_limit(cur))
+            text.append(self.SetCH[sel_ch].set_ch_output())
 
-        # Configuring the channels
-        for string in text:
-            self.__write_to_dev(string)
+            # Configuring the channels
+            for string in text:
+                self.__write_to_dev(string)
 
     def afg_set_waveform(self, sel_ch: int, voltage: np.ndarray, current: np.ndarray, time: np.ndarray, num_cycles=0):
         """Set arbitrary waveform of the selected channel (max. 128 points)"""
-        text = []
-        text.append(self.SetCH[sel_ch].set_arbitrary_waveform(voltage, current, time))
-        text.append(self.SetCH[sel_ch].set_arbitrary_repetition(num_cycles))
-        text.append(self.SetCH[sel_ch].set_arbitrary_transfer())
+        if not self.SerialActive:
+            print("... not done due to wrong device")
+        else:
+            text = list()
+            text.append(self.SetCH[sel_ch].set_arbitrary_waveform(voltage, current, time))
+            text.append(self.SetCH[sel_ch].set_arbitrary_repetition(num_cycles))
+            text.append(self.SetCH[sel_ch].set_arbitrary_transfer())
 
-        # Configuring the channels
-        for string in text:
-            self.__write_to_dev(string)
+            # Configuring the channels
+            for string in text:
+                self.__write_to_dev(string)
 
 
 class ChannelInfoHMP40X0:
@@ -247,8 +298,8 @@ class ChannelInfoHMP40X0:
 if __name__ == "__main__":
     scan_instruments()
 
-    sleep(1)
     inst_dev = DriverHMP40X0()
-    inst_dev.start_serial('ASRL4::INSTR')
+    inst_dev.start_serial()
     inst_dev.do_beep()
     inst_dev.ch_set_parameter(0, 1.6, 10e-3)
+    inst_dev.output_activate()

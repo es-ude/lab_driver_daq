@@ -16,7 +16,7 @@ def scan_instruments() -> list:
     return out_dev_adr
 
 
-class NGUX01:
+class DriverNGUX01:
     """Class for handling the Rohde and Schwarz Sourcemeter NGUX01 in Python"""
     SerialDevice: pyvisa.Resource
     SerialActive = False
@@ -34,31 +34,22 @@ class NGUX01:
         text_out = self.SerialDevice.query(order)
         return text_out
 
-    def __run_code(self, function):
-        """"""
-        if self.SerialActive:
-            return function
-        else:
-            print("Not right device available. Doing nothing!")
-
     def __init_dev(self, do_reset=True):
         """"""
         if self.SerialActive:
             if do_reset:
                 self.do_reset()
             self.__write_to_dev("SYST:MIX")
-            print(f"Right device is selected with: {self.get_id()}")
+            print(f"Right device is selected with: {self.get_id(False)}")
         else:
             print("Not right selected device. Please check!")
 
-    def __do_check_idn(self, do_print=True) -> None:
+    def __do_check_idn(self) -> None:
         """Checking the IDN"""
-        id_back = self.get_id(do_print)
+        id_back = self.get_id(False)
         if self._device_name_chck in id_back:
             self.SerialActive = True
         else:
-            if do_print:
-                print("... Device not right. Please check other version and restart!")
             self.SerialActive = False
 
     def start_serial_known_target(self, resource_name: str, do_reset=False) -> None:
@@ -246,6 +237,6 @@ class NGUX01:
 if __name__ == "__main__":
     scan_instruments()
 
-    dev = NGUX01()
+    dev = DriverNGUX01()
     dev.start_serial()
     dev.do_reset()
