@@ -10,13 +10,14 @@ def scan_instruments(do_print=True) -> list:
 
     out_dev_adr = list()
     for idx, inst_name in enumerate(obj_inst):
-        if idx == 0 and do_print:
-            print(f"\nUsing VISA driver: {rm}")
-            print("Available devices")
-            print("--------------------------------------")
-        elif do_print:
-            print(f"{idx}: {inst_name}")
         out_dev_adr.append(inst_name)
+        # --- Printing the stuff
+        if do_print:
+            if idx == 0:
+                print(f"\nUsing VISA driver: {rm}")
+                print("Available devices")
+                print("--------------------------------------")
+            print(f"{idx}: {inst_name}")
     return out_dev_adr
 
 
@@ -67,7 +68,7 @@ class DriverHMP40X0:
 
     def serial_open(self, do_reset=False) -> None:
         """Open the serial connection to device"""
-        list_dev = scan_instruments()
+        list_dev = scan_instruments(do_print=False)
         rm = pyvisa.ResourceManager()
 
         # --- Checking if device address is right
@@ -205,6 +206,7 @@ class DriverHMP40X0:
 
 class ChannelInfoHMP40X0:
     def __init__(self, ch_no: int):
+        """"""
         self.ChannelActive = False
         self.ChannelUsedAFG = False
         self.ChannelNumber = 1 + ch_no
@@ -224,29 +226,37 @@ class ChannelInfoHMP40X0:
         self.__dec_time = 2
 
     def sel_ch(self) -> str:
+        """"""
         return "INST OUT" + str(self.ChannelNumber)
 
     def set_ch_voltage(self, voltage_value: float) -> str:
+        """"""
         self.VoltageSet = voltage_value
         return "VOLT " + str(voltage_value)
 
     def set_ch_current_limit(self, current_value: float) -> str:
+        """"""
         self.CurrentLimit = current_value
         return "CURR " + str(current_value)
 
     def get_ch_parameter(self) -> str:
+        """"""
         return "APPL?"
 
     def set_ch_output(self) -> str:
+        """"""
         return "OUTP:SEL 1"
 
     def read_ch_voltage(self) -> str:
+        """"""
         return "MEAS:VOLT?"
 
     def read_ch_current(self) -> str:
+        """"""
         return "MEAS:CURR?"
 
     def set_sense_parameter(self, voltage: float, current: float) -> None:
+        """"""
         self.VoltageSense = voltage
         self.CurrentSense = current
         self.PowerSense = voltage * current
@@ -293,9 +303,11 @@ class ChannelInfoHMP40X0:
         return "ARB:REP " + str(cycles_num)
 
     def set_arbitrary_transfer(self) -> str:
+        """"""
         return "ARB:TRAN " + str(self.ChannelNumber)
 
     def set_arbitrary_start(self) -> str:
+        """"""
         return "ARB:START " + str(self.ChannelNumber)
 
     def set_arbitrary_stop(self) -> str:
@@ -303,10 +315,17 @@ class ChannelInfoHMP40X0:
 
 
 if __name__ == "__main__":
-    scan_instruments()
+    from time import sleep
+    # scan_instruments()
 
     inst_dev = DriverHMP40X0()
     inst_dev.serial_open()
+    inst_dev.get_id()
     inst_dev.do_beep()
     inst_dev.ch_set_parameter(0, 1.6, 10e-3)
+
     inst_dev.output_activate()
+    sleep(2)
+    inst_dev.output_deactivate()
+
+    inst_dev.serial_close()

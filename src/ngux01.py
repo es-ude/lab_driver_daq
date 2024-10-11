@@ -9,13 +9,14 @@ def scan_instruments(do_print=True) -> list:
 
     out_dev_adr = list()
     for idx, inst_name in enumerate(obj_inst):
-        if idx == 0 and do_print:
-            print(f"\nUsing VISA driver: {rm}")
-            print("Available devices")
-            print("--------------------------------------")
-        elif do_print:
-            print(f"{idx}: {inst_name}")
         out_dev_adr.append(inst_name)
+        # --- Printing the stuff
+        if do_print:
+            if idx == 0:
+                print(f"\nUsing VISA driver: {rm}")
+                print("Available devices")
+                print("--------------------------------------")
+            print(f"{idx}: {inst_name}")
     return out_dev_adr
 
 
@@ -65,7 +66,7 @@ class DriverNGUX01:
 
     def serial_start(self, do_reset=False) -> None:
         """Open the serial connection to device"""
-        list_dev = scan_instruments()
+        list_dev = scan_instruments(do_print=False)
         rm = pyvisa.ResourceManager()
 
         for inst_name in list_dev:

@@ -10,13 +10,14 @@ def scan_instruments(do_print=True) -> list:
 
     out_dev_adr = list()
     for idx, inst_name in enumerate(obj_inst):
-        if idx == 0 and do_print:
-            print(f"\nUsing VISA driver: {rm}")
-            print("Available devices")
-            print("--------------------------------------")
-        elif do_print:
-            print(f"{idx}: {inst_name}")
         out_dev_adr.append(inst_name)
+        # --- Printing the stuff
+        if do_print:
+            if idx == 0:
+                print(f"\nUsing VISA driver: {rm}")
+                print("Available devices")
+                print("--------------------------------------")
+            print(f"{idx}: {inst_name}")
     return out_dev_adr
 
 
@@ -64,7 +65,7 @@ class DriverMXO4X:
 
     def serial_start(self, do_reset=False) -> None:
         """Open the serial connection to device"""
-        list_dev = scan_instruments()
+        list_dev = scan_instruments(do_print=False)
         rm = pyvisa.ResourceManager()
 
         # --- Checking if device address is right
@@ -91,15 +92,6 @@ class DriverMXO4X:
             print(id)
         return id
 
-    def do_beep(self, num_iterations=1) -> None:
-        """Doing a single beep on device"""
-        if not self.SerialActive:
-            print("... not done due to wrong device")
-        else:
-            for ite in range(0, num_iterations):
-                self.__write_to_dev("SYST:BEEP")
-                sleep(1)
-
     def do_reset(self) -> None:
         """Reset the device"""
         if not self.SerialActive:
@@ -107,7 +99,15 @@ class DriverMXO4X:
         else:
             self.__write_to_dev("*RST")
             sleep(2)
-            self.do_beep()
+
+    def change_display_mode(self, show_display: bool) -> None:
+        """"""
+        self.__write_to_dev(f"SYST:DISP:UPD {int(show_display)}")
+
+    def change_remote_text(self, text: str) -> None:
+        """"""
+        self.__write_to_dev(f"SYST:DISP:STAT ON")
+        self.__write_to_dev(f"SYST:DISP:MESS {text}")
 
 
 if __name__ == "__main__":
@@ -115,4 +115,12 @@ if __name__ == "__main__":
 
     inst0 = DriverMXO4X()
     inst0.serial_start()
-    inst0.do_beep()
+    inst0.get_id()
+
+    inst0.do_reset()
+    sleep(10)
+
+    inst0.change_display_mode(False)
+    inst0.change_remote_text("Hello World!")
+
+    inst0.serial_close()
