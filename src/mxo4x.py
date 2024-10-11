@@ -38,7 +38,12 @@ class DriverMXO4X:
         return text_out
 
     def __init_dev(self, do_reset=True):
-        """"""
+        """If the correct device is selected, initialise it and optionally do a reset
+        Args:
+            do_reset: reset device or not
+        Returns:
+            None
+        """
         if self.SerialActive:
             if do_reset:
                 self.do_reset()
@@ -50,13 +55,16 @@ class DriverMXO4X:
     def __do_check_idn(self) -> None:
         """Checking the IDN"""
         id_back = self.get_id(False)
-        if self._device_name_chck in id_back:
-            self.SerialActive = True
-        else:
-            self.SerialActive = False
+        self.SerialActive = self._device_name_chck in id_back
 
     def serial_open_known_target(self, resource_name: str, do_reset=False) -> None:
-        """Open the serial connection to device"""
+        """Open the serial connection to device
+        Args:
+            resource_name: name of the device
+            do_reset: reset device during initialisation
+        Returns:
+            None
+        """
         rm = pyvisa.ResourceManager()
         self.SerialDevice = rm.open_resource(resource_name)
 
@@ -81,19 +89,34 @@ class DriverMXO4X:
         self.__init_dev(do_reset)
 
     def serial_close(self) -> None:
-        """Closing the serial connection"""
+        """Close the serial connection
+        Args:
+            N/A
+        Returns:
+            None
+            """
         self.SerialDevice.close()
         self.SerialActive = False
 
     def get_id(self, do_print=True) -> str:
-        """Getting the device ID"""
+        """Getting the device ID
+        Args:
+            do_print: optionally print the device ID to stdout
+        Returns:
+            Device ID as a string
+        """
         id = self.__read_from_dev("*IDN?")
         if do_print:
             print(id)
         return id
 
     def do_reset(self) -> None:
-        """Reset the device"""
+        """Reset the device, then wait two seconds
+        Args:
+            N/A
+        Returns:
+            None
+        """
         if not self.SerialActive:
             print("... not done due to wrong device")
         else:
@@ -101,7 +124,12 @@ class DriverMXO4X:
             sleep(2)
 
     def change_display_mode(self, show_display: bool) -> None:
-        """"""
+        """Decide whether display is shown during remote control
+        Args:
+            show_display: True to show display, False to show static image (may improve performance)
+        Returns:
+            None
+        """
         self.__write_to_dev(f"SYST:DISP:UPD {int(show_display)}")
 
     def change_remote_text(self, text: str) -> None:
