@@ -4,7 +4,12 @@ import pyvisa
 
 
 def scan_instruments(do_print=True) -> list:
-    """Scanning the VISA bus for instruments"""
+    """Scanning the VISA bus for instruments
+    Args:
+        do_print: True to print every detected instrument
+    Returns:
+        List of all detected instruments
+    """
     rm = pyvisa.ResourceManager()
     obj_inst = rm.list_resources()
 
@@ -31,9 +36,21 @@ class DriverMXO4X:
         pass
 
     def __write_to_dev(self, order: str) -> None:
+        """Wrapper for executing commands on device
+        Args:
+            order: command to run on device (may alter device state)
+        Returns:
+            None
+        """
         self.SerialDevice.write(order)
 
     def __read_from_dev(self, order: str) -> str:
+        """Wrapper for querying data from device
+        Args:
+            order: command to run on device
+        Returns:
+            Queried data as a string
+        """
         text_out = self.SerialDevice.query(order)
         return text_out
 
@@ -72,7 +89,12 @@ class DriverMXO4X:
         self.__init_dev(do_reset)
 
     def serial_start(self, do_reset=False) -> None:
-        """Open the serial connection to device"""
+        """Open the serial connection to device if it is found
+        Args:
+            do_reset: reset device during initialisation
+        Returns:
+            None
+        """
         list_dev = scan_instruments(do_print=False)
         rm = pyvisa.ResourceManager()
 
@@ -94,7 +116,7 @@ class DriverMXO4X:
             N/A
         Returns:
             None
-            """
+        """
         self.SerialDevice.close()
         self.SerialActive = False
 
@@ -133,8 +155,13 @@ class DriverMXO4X:
         self.__write_to_dev(f"SYST:DISP:UPD {int(show_display)}")
 
     def change_remote_text(self, text: str) -> None:
-        """"""
-        self.__write_to_dev(f"SYST:DISP:STAT ON")
+        """Display an additional text in remote control
+        Args:
+            text: text to display
+        Returns:
+            None
+        """
+        self.__write_to_dev(f"SYST:DISP:MESS:STAT ON")
         self.__write_to_dev(f"SYST:DISP:MESS {text}")
 
 
