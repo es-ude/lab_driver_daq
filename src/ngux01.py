@@ -1,11 +1,14 @@
 from time import sleep
 import pyvisa
+import platform
 
 
 def scan_instruments(do_print=True) -> list:
     """Scanning the VISA bus for instruments"""
     rm = pyvisa.ResourceManager()
-    obj_inst = rm.list_resources()
+    obj_inst = list(rm.list_resources())
+    if platform.system() == "Linux":
+        obj_inst = filter(lambda inst_name: "ACM" in inst_name, obj_inst)
 
     out_dev_adr = list()
     for idx, inst_name in enumerate(obj_inst):
