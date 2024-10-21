@@ -128,8 +128,10 @@ if __name__ == "__main__":
     dev = DriverDMM6500()
     dev.serial_start()
     dev.do_reset()
-    #dev.set_measurement_mode(0)
+
     sleep(1)
     for idx in range(0, 5):
         print(dev.read_value())
         sleep(0.5)
+
+    dev.serial_close()

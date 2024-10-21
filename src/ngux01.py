@@ -249,3 +249,5 @@ if __name__ == "__main__":
     dev = DriverNGUX01()
     dev.serial_start()
     dev.do_reset()
+    dev.serial_close()
+

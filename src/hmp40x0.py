@@ -22,26 +22,47 @@ def scan_instruments(do_print=True) -> list:
 
 
 class DriverHMP40X0:
-    """Class for Remote Controlling the Power Supply R&S HMP40X0 via USB"""
     SerialDevice: pyvisa.Resource
     _device_name_chck = "HMP"
 
-    def __init__(self, num_ch=4):
-        """Initizialization of Power Supply Device with BAUD=9600(com_name, num_of_channels)"""
+    def __init__(self, num_ch=4) -> None:
+        """Class for Remote Controlling the Power Supply R&S HMP40X0 via USB
+        Args:
+            num_ch:     Number of available device channels (HMP4030 = 3, HMP4040 = 4)
+        Return:
+             None
+        """
         self.__NoChannels = num_ch
         self.SerialActive = False
         self.ChannelUsed = [False, False, False, False]
         self.SetCH = [ChannelInfoHMP40X0(idx) for idx in range(num_ch)]
 
     def __write_to_dev(self, order: str) -> None:
+        """Writing content to serial connection
+        Args:
+            order:  String for content
+        Return:
+            None
+        """
         self.SerialDevice.write(order)
 
     def __read_from_dev(self, order: str) -> str:
+        """Reading content from serial connection
+        Args:
+            order:  String for content
+        Return:
+            String with information from device
+        """
         text_out = self.SerialDevice.query(order)
         return text_out
 
-    def __init_dev(self, do_reset=True):
-        """"""
+    def __init_dev(self, do_reset=True) -> None:
+        """Initialization of device
+        Args:
+            do_reset:       Doing a reset of device
+        Return:
+            None
+        """
         if self.SerialActive:
             if do_reset:
                 self.do_reset()
@@ -59,7 +80,13 @@ class DriverHMP40X0:
             self.SerialActive = False
 
     def serial_open_known_target(self, resource_name: str, do_reset=False) -> None:
-        """Open the serial connection to device"""
+        """Open the serial connection to device
+        Args:
+            resource_name:  Ressource name of serial communication from device
+            do_reset:       Doing a device reset
+        Return:
+            None
+        """
         rm = pyvisa.ResourceManager()
         self.SerialDevice = rm.open_resource(resource_name)
 
@@ -315,17 +342,8 @@ class ChannelInfoHMP40X0:
 
 
 if __name__ == "__main__":
-    from time import sleep
-    # scan_instruments()
-
     inst_dev = DriverHMP40X0()
     inst_dev.serial_open()
     inst_dev.get_id()
     inst_dev.do_beep()
-    inst_dev.ch_set_parameter(0, 1.6, 10e-3)
-
-    inst_dev.output_activate()
-    sleep(2)
-    inst_dev.output_deactivate()
-
     inst_dev.serial_close()
