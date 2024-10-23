@@ -19,6 +19,9 @@ def scan_instruments(do_print=True) -> list:
             print(f"{idx}: {inst_name}")
     return out_dev_adr
 
+def float_eq(x, y, epsilon=0.00001):
+    return abs(x - y) < epsilon
+
 
 class DriverDMM6500:
     """Class for handling the Keithley Digital Multimeter 6500 in Python"""
@@ -50,10 +53,7 @@ class DriverDMM6500:
     def __do_check_idn(self) -> None:
         """Checking the IDN"""
         id_back = self.get_id(False)
-        if self._device_name_chck in id_back:
-            self.SerialActive = True
-        else:
-            self.SerialActive = False
+        self.SerialActive = self._device_name_chck in id_back
 
     def serial_start_known_target(self, resource_name: str, do_reset=False) -> None:
         """Open the serial connection to device directly"""
@@ -120,6 +120,48 @@ class DriverDMM6500:
         else:
             return float(self.__read_from_dev(":READ?"))
 
+    def get_voltage(self):
+        """Get voltage reading
+        Args:
+            N/A
+        Returns:
+            Voltage in Volts
+        """
+        return float(self.__read_from_dev(":MEAS:VOLT?"))
+
+    def get_current(self):
+        """Get current reading
+        Args:
+            N/A
+        Returns:
+            Current in Ampere
+        """
+        return float(self.__read_from_dev(":MEAS:CURR?"))
+
+    def get_resistance(self):
+        """Get resistance reading
+        Args:
+            N/A
+        Returns:
+            Resistance in Ohms
+        """
+        return float(self.__read_from_dev(":MEAS:RES?"))
+
+    def set_voltage_range(self, range: float) -> bool:
+        """Set measurement range of voltage
+        Args:
+            range: Available ranges are 0.1, 1, 10, 100 and 1000 Volts
+        Returns:
+            True iff range is invalid
+        """
+        available_ranges = ["1e-1", "1", "10", "100", "1000"]
+        for x in available_ranges:
+            if float_eq(float(x), range):
+                self.__write_to_dev(":SENS:VOLT:RANG " + x)
+                return False
+        return True
+
+# NOTE: page 498 in manual
 
 if __name__ == "__main__":
     print("Testing device Keithley DMM6500")
@@ -129,7 +171,6 @@ if __name__ == "__main__":
     dev.serial_start()
     dev.do_reset()
     #dev.set_measurement_mode(0)
-    sleep(1)
-    for idx in range(0, 5):
-        print(dev.read_value())
+    for i in range(5):
+        print(f"{dev.get_voltage()} V | {dev.get_current()} A | {dev.get_resistance()} Ω")
         sleep(0.5)
