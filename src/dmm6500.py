@@ -19,9 +19,6 @@ def scan_instruments(do_print=True) -> list:
             print(f"{idx}: {inst_name}")
     return out_dev_adr
 
-def float_eq(x, y, epsilon=0.00001):
-    return abs(x - y) < epsilon
-
 
 class DriverDMM6500:
     """Class for handling the Keithley Digital Multimeter 6500 in Python"""
@@ -120,6 +117,9 @@ class DriverDMM6500:
         else:
             return float(self.__read_from_dev(":READ?"))
 
+    def __float_eq(self, x, y, epsilon=0.00000001):
+        return abs(x - y) < epsilon
+
     def get_voltage(self):
         """Get voltage reading
         Args:
@@ -147,22 +147,68 @@ class DriverDMM6500:
         """
         return float(self.__read_from_dev(":MEAS:RES?"))
 
-    def set_voltage_range(self, range: float) -> bool:
-        """Set measurement range of voltage
+    # NOTE: manual page 498
+    def __set_measurement_range(self, function: str, polarity: str, range: float):
+        """Wrapper for changing ranges
         Args:
-            range: Available ranges are 0.1, 1, 10, 100 and 1000 Volts
+            function: "VOLT" or "CURR"
+            polarity: "AC" or "DC"
+            range: One of the available ranges for that selection
         Returns:
-            True iff range is invalid
+            True on failure
         """
-        available_ranges = ["1e-1", "1", "10", "100", "1000"]
-        for x in available_ranges:
-            if float_eq(float(x), range):
-                self.__write_to_dev(":SENS:VOLT:RANG " + x)
+        available_ranges = {
+            "DC" : {
+                "VOLT": ["1e-1", "1", "10", "100", "1000"],
+                "CURR": ["1e-5", "1e-4", "1e-3", "1e-2", "1e-1", "1", "3"]
+            },
+            "AC" : {
+                "VOLT": ["1e-1", "1", "10", "100", "750"],
+                "CURR": ["1e-3", "1e-2", "1e-1", "1", "3"]
+            }
+        }
+
+        if polarity in available_ranges and function in available_ranges[polarity]:
+            ranges = available_ranges[polarity][function]
+        else:
+            print("Changing measurement range failed. Check polarity. Check function.")
+            return True
+
+        for x in ranges:
+            if self.__float_eq(float(x), range):
+                self.__write_to_dev(f"SENS:{function}:{polarity}:RANG {x}")
                 return False
+
+        print("Changing measurement range failed. Check range selection.")
         return True
 
+    def set_voltage_range(self, range: float, polarity: str = "DC") -> bool:
+        """Set measurement range of voltage
+        Args:
+            range: Available ranges are 0.1, 1, 10, 100 and 1000 Volts in DC mode
+                and 0.1, 1, 10, 100, 750 in AC mode
+            polarity: "DC" or "AC", default is "DC"
+        Returns:
+            True on failure
+        """
+        self.__set_measurement_range("VOLT", polarity, range)
 
-if __name__ == "__main__":
+    def set_current_range(self, range: float, polarity: str = "DC") -> bool:
+        """Set measurement range of current
+        Args:
+            range: Available ranges are 0.00001, 0.0001, 0.001, 0.01, 0.1, 1 and 3 Amps
+                in DC mode and 0.001, 0.01, 0.1, 1 and 3 Amps in AC mode
+            polarity: "DC" or "AC", default is "DC"
+        Returns:
+            True on failure
+        """
+        self.__set_measurement_range("CURR", polarity, range)
+
+
+
+
+
+def main():
     print("Testing device Keithley DMM6500")
 
     # scan_instruments()
@@ -176,3 +222,7 @@ if __name__ == "__main__":
         sleep(0.5)
 
     dev.serial_close()
+
+
+if __name__ == "__main__":
+    main()
