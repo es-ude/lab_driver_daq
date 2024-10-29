@@ -36,13 +36,14 @@ class DriverDMM6500:
         text_out = self.SerialDevice.query(order)
         return text_out
 
-    def __init_dev(self, do_reset=True):
+    def __init_dev(self, do_reset=True, do_beep=True):
         """"""
         self.__write_to_dev("*LANG SCPI")
         if self.SerialActive:
             if do_reset:
                 self.do_reset()
-            self.do_beep()
+            if do_beep:
+                self.do_beep()
             print(f"Right device is selected with: {self.get_id(False)}")
         else:
             print("Not right selected device. Please check!")
@@ -60,7 +61,7 @@ class DriverDMM6500:
         self.__do_check_idn()
         self.__init_dev(do_reset)
 
-    def serial_start(self, do_reset=False) -> None:
+    def serial_start(self, do_reset=False, do_beep=True) -> None:
         """Open the serial connection to device"""
         list_dev = scan_instruments(do_print=False)
         rm = pyvisa.ResourceManager()
@@ -75,7 +76,7 @@ class DriverDMM6500:
                 self.serial_close()
 
         # --- Init of device
-        self.__init_dev(do_reset)
+        self.__init_dev(do_reset, do_beep)
 
     def serial_close(self) -> None:
         """Closing the serial connection"""
@@ -176,36 +177,53 @@ class DriverDMM6500:
 
         for x in ranges:
             if self.__float_eq(float(x), range):
-                self.__write_to_dev(f"SENS:{function}:{polarity}:RANG {x}")
+                self.__write_to_dev(f":SENS:{function}:{polarity}:RANG {x}")
                 return False
 
         print("Changing measurement range failed. Check range selection.")
         return True
 
-    def set_voltage_range(self, range: float, polarity: str = "DC") -> bool:
+    def set_resistance_range(self, range: float | str) -> bool:
+        from math import log10
+        if range == "AUTO":
+            self.__write_to_dev(":SENS:RES:RANG:AUTO ON")
+            return False
+        else:
+            range = log10(range)
+            if range == int(range) and 0 <= range <= 8:
+                self.__write_to_dev(f":SENS:RES:RANG {range}")
+                return False
+            return True
+
+    def set_voltage_range(self, range: float | str, polarity: str = "DC") -> bool:
         """Set measurement range of voltage
         Args:
             range: Available ranges are 0.1, 1, 10, 100 and 1000 Volts in DC mode
-                and 0.1, 1, 10, 100, 750 in AC mode
+                and 0.1, 1, 10, 100, 750 in AC mode or just "AUTO"
             polarity: "DC" or "AC", default is "DC"
         Returns:
             True on failure
         """
-        self.__set_measurement_range("VOLT", polarity, range)
+        if range == "AUTO":
+            self.__write_to_dev(":SENS:VOLT:RANG:AUTO ON")
+            return False
+        else:
+            return self.__set_measurement_range("VOLT", polarity, range)
 
-    def set_current_range(self, range: float, polarity: str = "DC") -> bool:
+    def set_current_range(self, range: float | str, polarity: str = "DC") -> bool:
         """Set measurement range of current
         Args:
             range: Available ranges are 0.00001, 0.0001, 0.001, 0.01, 0.1, 1 and 3 Amps
-                in DC mode and 0.001, 0.01, 0.1, 1 and 3 Amps in AC mode
+                in DC mode and 0.001, 0.01, 0.1, 1 and 3 Amps in AC mode or just "AUTO"
             polarity: "DC" or "AC", default is "DC"
         Returns:
             True on failure
         """
-        self.__set_measurement_range("CURR", polarity, range)
-
-
-
+        if range == "AUTO":
+            self.__write_to_dev(":SENS:CURR:RANG:AUTO ON")
+            return False
+        else:
+            return self.__set_measurement_range("CURR", polarity, range)
 
 
 def main():
@@ -213,7 +231,7 @@ def main():
 
     # scan_instruments()
     dev = DriverDMM6500()
-    dev.serial_start()
+    dev.serial_start(do_beep=False)
     dev.do_reset()
 
     sleep(1)
