@@ -104,12 +104,18 @@ class DriverDMM6500:
         self.__write_to_dev(f':SYST:BEEP 300, {time_sleep}')
         sleep(time_sleep * 1.1)
 
-    def set_measurement_mode(self, mode: int) -> None:
-        """Setting the measurement mode"""
-        if not self.SerialActive:
-            print("... not done due to wrong device")
+    def set_measurement_mode(self, mode: str, polarity: str = "") -> None:
+        """Set the measurement mode
+        Args:
+            mode: "VOLT", "CURR" or "RES"
+            polarity: "DC" or "AC" where applicable, else ""
+        Returns:
+            None
+        """
+        if polarity:
+            self.__write_to_dev(f':SENS:FUNC "{mode}:{polarity}"')
         else:
-            self.__write_to_dev(':SENS:FUNC "VOLT:DC"')
+            self.__write_to_dev(f':SENS:FUNC "{mode}"')
 
     def read_value(self) -> float:
         """Reading value from display"""
@@ -225,6 +231,9 @@ class DriverDMM6500:
         else:
             return self.__set_measurement_range("CURR", polarity, range)
 
+    def test(self):
+        print(self.__read_from_dev(":SENS:FUNC?"))
+
 
 def main():
     print("Testing device Keithley DMM6500")
@@ -233,8 +242,10 @@ def main():
     dev = DriverDMM6500()
     dev.serial_start(do_beep=False)
     dev.do_reset()
+    dev.set_measurement_mode(0)
+    dev.set_voltage_range(1, "AC")
+    dev.test()
 
-    sleep(1)
     for idx in range(0, 5):
         print(dev.read_value())
         sleep(0.5)
