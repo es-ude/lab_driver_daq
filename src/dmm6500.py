@@ -257,13 +257,26 @@ class DriverDMM6500:
         else:
             print(f"Only 2-wire and 4-wire resistance types are supported. You selected {type}.")
             return True
-        print("Range argument is out of supported range.")
+        print(f"Range argument is out of supported range: {range}")
         return True
 
     def set_2wire_resistance_range(self, range: int | str) -> bool:
+        """Set measurement range of 2-wire resistance
+        Args:
+            range: Power of 10 from 10^1 to 10^8 or "AUTO"
+        Returns:
+            True on failure
+        """
         return self.__set_resistance_range(range, 2)
 
     def set_4wire_resistance_range(self, range: int | str) -> bool:
+        """Set measurement range of 4-wire resistance
+        Args:
+            range: Power of 10 from 10^0 to 10^8 if offset compensation is off or "AUTO",
+                else 10^0 to 10^4 if offset compensation is on.
+        Returns:
+            True on failure
+        """
         return self.__set_resistance_range(range, 4)
 
     def set_voltage_range(self, range: float | str, polarity: str = "DC") -> bool:
