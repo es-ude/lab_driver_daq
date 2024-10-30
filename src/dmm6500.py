@@ -34,7 +34,7 @@ class DriverDMM6500:
 
     def __read_from_dev(self, order: str) -> str:
         text_out = self.SerialDevice.query(order)
-        return text_out
+        return text_out.strip()
 
     def __init_dev(self, do_reset=True, do_beep=True):
         """"""
@@ -230,7 +230,7 @@ class DriverDMM6500:
             if type not in (2,4):
                 print(f"Only 2-wire and 4-wire resistance types are supported. You selected {type}.")
                 return True
-            self.__write_to_dev(":SENS:#RES:RANG AUTO".replace('#', '4' if type == 4 else ''))
+            self.__write_to_dev(":SENS:#RES:RANG:AUTO ON".replace('#', 'F' if type == 4 else ''))
             return False
 
         try:
@@ -248,11 +248,11 @@ class DriverDMM6500:
                 self.__write_to_dev(f":SENS:RES:RANG {range}")
                 return False
         elif type == 4:
-            offset_comp = bool(self.__read_from_dev(":SENS:FRES:OCOM?"))
+            offset_comp = self.__read_from_dev(":SENS:FRES:OCOM?")
             valid = offset_comp == "ON" and 0 <= power <= 4
             valid |= offset_comp in ("OFF", "AUTO") and 0 <= power <= 8
             if valid:
-                self.__write_to_dev(f":SENS:RES:RANG {range}")
+                self.__write_to_dev(f":SENS:FRES:RANG {range}")
                 return False
         else:
             print(f"Only 2-wire and 4-wire resistance types are supported. You selected {type}.")
@@ -309,7 +309,9 @@ def main():
     dev.serial_start(do_beep=False)
     dev.do_reset()
     dev.set_measurement_mode("FRES")
-    dev.test()
+    dev.set_4wire_offset_compensation("AUTO")
+    dev.set_4wire_resistance_range("AUTO")
+    #dev.test()
 
     for idx in range(0, 5):
         print(dev.read_value())
