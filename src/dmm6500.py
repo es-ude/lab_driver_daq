@@ -107,7 +107,7 @@ class DriverDMM6500:
     def set_measurement_mode(self, mode: str, polarity: str = "") -> None:
         """Set the measurement mode
         Args:
-            mode: "VOLT", "CURR" or "RES"
+            mode: "VOLT", "CURR", "RES" or "FRES"
             polarity: "DC" or "AC" where applicable, else ""
         Returns:
             None
@@ -145,18 +145,27 @@ class DriverDMM6500:
         """
         return float(self.__read_from_dev(":MEAS:CURR?"))
 
-    def get_resistance(self):
-        """Get resistance reading
+    def get_2wire_resistance(self):
+        """Get 2-wire resistance reading
         Args:
             N/A
         Returns:
-            Resistance in Ohms
+            2-wire resistance in Ohms
         """
         return float(self.__read_from_dev(":MEAS:RES?"))
 
+    def get_4wire_resistance(self):
+        """Get 4-wire resistance reading
+        Args:
+            N/A
+        Returns:
+            4-wire resistance in Ohms
+        """
+        return float(self.__read_from_dev(":MEAS:FRES?"))
+
     # NOTE: manual page 498
     def __set_measurement_range(self, function: str, polarity: str, range: float):
-        """Wrapper for changing ranges
+        """Wrapper for changing ranges of voltage or current readings
         Args:
             function: "VOLT" or "CURR"
             polarity: "AC" or "DC"
@@ -189,17 +198,73 @@ class DriverDMM6500:
         print("Changing measurement range failed. Check range selection.")
         return True
 
-    def set_resistance_range(self, range: float | str) -> bool:
-        from math import log10
-        if range == "AUTO":
-            self.__write_to_dev(":SENS:RES:RANG:AUTO ON")
-            return False
+    def set_4wire_offset_compensation(self, compensation: bool | str) -> bool:
+        """Enable or disable offset compensation for 4-wire resistance
+        Args:
+            compensation: True to enable, False to disable, "AUTO" to enable automatically
+        Returns:
+            True on failure; invalid argument
+        """
+        if compensation == "AUTO":
+            self.__write_to_dev(":SENS:FRES:OCOM AUTO")
+        elif type(compensation) == bool:
+            self.__write_to_dev(f":SENS:FRES:OCOM {int(compensation)}")
         else:
-            range = log10(range)
-            if range == int(range) and 0 <= range <= 8:
+            print("Setting 4-wire resistance offset compensation failed. Check argument.")
+            return True
+        return False
+
+    def __set_resistance_range(self, range: int | str, type: int) -> bool:
+        """Wrapper for changing ranges of resistance readings
+        Args:
+            range: One of the available ranges for that type of resistance reading or "AUTO".
+                All ranges are powers of 10.
+                2-wire ranges are 10^1 to 10^8.
+                4-wire ranges are 10^0 to 10^8 if offset compensation is off or auto.
+                4-wire ranges are 10^0 to 10^4 if offset compensation is on.
+            type: 2 or 4 to change resistance range of 2-wire of 4-wire resistance.
+        Returns:
+            True on failure
+        """
+        if range == "AUTO":
+            if type not in (2,4):
+                print(f"Only 2-wire and 4-wire resistance types are supported. You selected {type}.")
+                return True
+            self.__write_to_dev(":SENS:#RES:RANG AUTO".replace('#', '4' if type == 4 else ''))
+            return False
+
+        try:
+            from math import log10
+            power = log10(range)
+            if power != int(power):
+                print("Range argument must be power of 10.")
+                return True
+        except:
+            print(f"Mathematical error during computation of log10 of range argument: '{range}'.")
+            return True
+
+        if type == 2:
+            if 1 <= power <= 8:
                 self.__write_to_dev(f":SENS:RES:RANG {range}")
                 return False
+        elif type == 4:
+            offset_comp = bool(self.__read_from_dev(":SENS:FRES:OCOM?"))
+            valid = offset_comp == "ON" and 0 <= power <= 4
+            valid |= offset_comp in ("OFF", "AUTO") and 0 <= power <= 8
+            if valid:
+                self.__write_to_dev(f":SENS:RES:RANG {range}")
+                return False
+        else:
+            print(f"Only 2-wire and 4-wire resistance types are supported. You selected {type}.")
             return True
+        print("Range argument is out of supported range.")
+        return True
+
+    def set_2wire_resistance_range(self, range: int | str) -> bool:
+        return self.__set_resistance_range(range, 2)
+
+    def set_4wire_resistance_range(self, range: int | str) -> bool:
+        return self.__set_resistance_range(range, 4)
 
     def set_voltage_range(self, range: float | str, polarity: str = "DC") -> bool:
         """Set measurement range of voltage
@@ -232,7 +297,8 @@ class DriverDMM6500:
             return self.__set_measurement_range("CURR", polarity, range)
 
     def test(self):
-        print(self.__read_from_dev(":SENS:FUNC?"))
+        self.__write_to_dev(":SENS:FRES:OCOM OFF")
+        print(self.__read_from_dev(":SENS:FRES:OCOM?"))
 
 
 def main():
@@ -242,8 +308,7 @@ def main():
     dev = DriverDMM6500()
     dev.serial_start(do_beep=False)
     dev.do_reset()
-    dev.set_measurement_mode(0)
-    dev.set_voltage_range(1, "AC")
+    dev.set_measurement_mode("FRES")
     dev.test()
 
     for idx in range(0, 5):
