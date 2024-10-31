@@ -164,7 +164,7 @@ class DriverDMM6500:
         return float(self.__read_from_dev(":MEAS:FRES?"))
 
     # NOTE: manual page 498
-    def __set_measurement_range(self, function: str, polarity: str, range: float):
+    def __set_volt_curr_range(self, function: str, polarity: str, range: float):
         """Wrapper for changing ranges of voltage or current readings
         Args:
             function: "VOLT" or "CURR"
@@ -183,6 +183,10 @@ class DriverDMM6500:
                 "CURR": ["1e-3", "1e-2", "1e-1", "1", "3"]
             }
         }
+
+        if self.__read_from_dev(":ROUT:TERM?") == "REAR":
+            available_ranges["DC"]["CURR"].append("10")
+            available_ranges["AC"]["CURR"].append("10")
 
         if polarity in available_ranges and function in available_ranges[polarity]:
             ranges = available_ranges[polarity][function]
@@ -240,7 +244,7 @@ class DriverDMM6500:
                 print("Range argument must be power of 10.")
                 return True
         except:
-            print(f"Mathematical error during computation of log10 of range argument: '{range}'.")
+            print(f"Mathematical error during computation of log10 of range argument: {range}.")
             return True
 
         if type == 2:
@@ -292,13 +296,14 @@ class DriverDMM6500:
             self.__write_to_dev(":SENS:VOLT:RANG:AUTO ON")
             return False
         else:
-            return self.__set_measurement_range("VOLT", polarity, range)
+            return self.__set_volt_curr_range("VOLT", polarity, range)
 
     def set_current_range(self, range: float | str, polarity: str = "DC") -> bool:
         """Set measurement range of current
         Args:
             range: Available ranges are 0.00001, 0.0001, 0.001, 0.01, 0.1, 1 and 3 Amps
-                in DC mode and 0.001, 0.01, 0.1, 1 and 3 Amps in AC mode or just "AUTO"
+                in DC mode and 0.001, 0.01, 0.1, 1 and 3 Amps in AC mode or just "AUTO".
+                When the rear terminals are used, 10 Amp range is available.
             polarity: "DC" or "AC", default is "DC"
         Returns:
             True on failure
@@ -307,7 +312,7 @@ class DriverDMM6500:
             self.__write_to_dev(":SENS:CURR:RANG:AUTO ON")
             return False
         else:
-            return self.__set_measurement_range("CURR", polarity, range)
+            return self.__set_volt_curr_range("CURR", polarity, range)
 
     def test(self):
         self.__write_to_dev(":SENS:FRES:OCOM OFF")
@@ -321,9 +326,8 @@ def main():
     dev = DriverDMM6500()
     dev.serial_start(do_beep=False)
     dev.do_reset()
-    dev.set_measurement_mode("FRES")
-    dev.set_4wire_offset_compensation("AUTO")
-    dev.set_4wire_resistance_range("AUTO")
+    dev.set_measurement_mode("CURR")
+    dev.set_current_range(0.1)
     #dev.test()
 
     for idx in range(0, 5):
