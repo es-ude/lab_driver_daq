@@ -66,7 +66,9 @@ class DriverMXO4X:
         if self.SerialActive:
             if do_reset:
                 self.do_reset()
-            self.__write_to_dev("SYST:MIX")   # TODO: Instrument error detected: -113,"Undefined header;SYST:MIX"
+            # This command doesn't seem to exist? Windows doesn't throw exceptions on wrong commands,
+            # that's why it worked there, but not on Linux
+            # self.__write_to_dev("SYST:MIX")   # Instrument error detected: -113,"Undefined header;SYST:MIX"
             print(f"Right device is selected with: {self.get_id(False)}")
         else:
             print("Not right selected device. Please check!")
