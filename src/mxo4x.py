@@ -2,6 +2,7 @@ import numpy as np
 from time import sleep
 import pyvisa
 import platform
+from RsInstrument import RsInstrument
 
 
 def scan_instruments(do_print=True) -> list:
@@ -11,10 +12,8 @@ def scan_instruments(do_print=True) -> list:
     Returns:
         List of all detected instruments
     """
-    rm = pyvisa.ResourceManager()
+    rm = pyvisa.ResourceManager("@py")
     obj_inst = list(rm.list_resources())
-    if platform.system() == "Linux":    # TODO: can't find device on Linux
-        obj_inst = filter(lambda inst_name: "ttyS" not in inst_name, obj_inst)
 
     out_dev_adr = list()
     for idx, inst_name in enumerate(obj_inst):
@@ -31,7 +30,7 @@ def scan_instruments(do_print=True) -> list:
 
 class DriverMXO4X:
     """Class for handling the Rohde and Schwarz Mixed-Signal Oscilloscope MXO44 in Python"""
-    SerialDevice: pyvisa.Resource
+    SerialDevice: pyvisa.Resource | RsInstrument
     SerialActive = False
     _device_name_chck = "MXO"
 
@@ -67,7 +66,7 @@ class DriverMXO4X:
         if self.SerialActive:
             if do_reset:
                 self.do_reset()
-            self.__write_to_dev("SYST:MIX")
+            self.__write_to_dev("SYST:MIX")   # TODO: Instrument error detected: -113,"Undefined header;SYST:MIX"
             print(f"Right device is selected with: {self.get_id(False)}")
         else:
             print("Not right selected device. Please check!")
@@ -85,8 +84,11 @@ class DriverMXO4X:
         Returns:
             None
         """
-        rm = pyvisa.ResourceManager()
-        self.SerialDevice = rm.open_resource(resource_name)
+        if platform.system() == "Linux":
+            self.SerialDevice = RsInstrument(resource_name)
+        else:
+            rm = pyvisa.ResourceManager()
+            self.SerialDevice = rm.open_resource(resource_name)
 
         self.__do_check_idn()
         self.__init_dev(do_reset)
@@ -98,6 +100,10 @@ class DriverMXO4X:
         Returns:
             None
         """
+        if platform.system() == "Linux":
+            self.serial_open_known_target("USB0::0x0AAD::0x0197::1335.5050k04-201451::INSTR", do_reset)
+            return
+
         list_dev = scan_instruments(do_print=False)
         rm = pyvisa.ResourceManager()
 
@@ -176,7 +182,7 @@ if __name__ == "__main__":
     inst0.get_id()
 
     inst0.do_reset()
-    sleep(10)
+    sleep(1)
 
     inst0.change_display_mode(False)
     inst0.change_remote_text("Hello World!")
