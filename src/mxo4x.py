@@ -107,6 +107,7 @@ class DriverMXO4X:
             None
         """
         if platform.system() == "Linux":
+            # Resource string for MXO44
             self.serial_open_known_target("USB0::0x0AAD::0x0197::1335.5050k04-201451::INSTR", do_reset)
             return
 
