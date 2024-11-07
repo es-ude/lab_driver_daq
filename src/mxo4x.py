@@ -87,7 +87,11 @@ class DriverMXO4X:
             None
         """
         if platform.system() == "Linux":
-            self.SerialDevice = RsInstrument(resource_name)
+            try:
+                self.SerialDevice = RsInstrument(resource_name)
+            except:
+                print(f"Could not find or open device {resource_name}")
+                return
         else:
             rm = pyvisa.ResourceManager()
             self.SerialDevice = rm.open_resource(resource_name)
@@ -173,7 +177,7 @@ class DriverMXO4X:
             None
         """
         self.__write_to_dev(f"SYST:DISP:MESS:STAT ON")
-        self.__write_to_dev(f"SYST:DISP:MESS {text}")
+        self.__write_to_dev(f"SYST:DISP:MESS '{text}'")
 
 
 if __name__ == "__main__":
