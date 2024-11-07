@@ -12,8 +12,8 @@ def scan_instruments(do_print=True) -> list:
     Returns:
         List of all detected instruments
     """
-    rm = pyvisa.ResourceManager("@py")
-    obj_inst = list(rm.list_resources())
+    rm = pyvisa.ResourceManager()
+    obj_inst = rm.list_resources()
 
     out_dev_adr = list()
     for idx, inst_name in enumerate(obj_inst):

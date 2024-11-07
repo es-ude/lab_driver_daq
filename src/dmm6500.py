@@ -108,7 +108,7 @@ class DriverDMM6500:
         """Set the measurement mode
         Args:
             mode: "VOLT", "CURR", "RES" or "FRES"
-            polarity: "DC" or "AC" where applicable, else ""
+            polarity: "DC" or "AC" applicable for current and voltage, else ""
         Returns:
             None
         """
