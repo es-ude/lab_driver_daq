@@ -239,12 +239,15 @@ class DriverNGUX01:
                 print(f"... meas. energy: {1e3 * val:.6f} mWh")
             return val
 
+    def do_fastlog(self):
+        self.__write_to_dev("FLOG 1")
+
 
 if __name__ == "__main__":
     scan_instruments()
 
     dev = DriverNGUX01()
     dev.serial_start()
-    dev.do_reset()
+    dev.do_fastlog()
     dev.serial_close()
 
