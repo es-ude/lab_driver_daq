@@ -132,16 +132,34 @@ class DriverNGUX01:
             print(f"System time: {int(time[0]):02d}:{int(time[1]):02d},{int(time[2]):02d}")
 
     def set_voltage_range(self, range: float) -> bool:
-        if 0 <= range <= 20.005:
+        """Set measurement voltage range
+        Args:
+            range: voltage range from 0 to 20 Volts
+        Returns:
+            True when argument is invalid
+        """
+        if 0 <= range <= 20:
             self.__write_to_dev(f"VOLT:RANG {range:.5f}")
             self._fastlog_options["volt_range"] = range
             return False
         return True
 
     def get_voltage_range(self) -> float:
-        return self.__read_from_dev("VOLT:RANG?")
+        """Get measurement voltage range
+        Args:
+            N/A
+        Returns:
+            Range from 0 to 20 Volts
+        """
+        return float(self.__read_from_dev("VOLT:RANG?"))
 
     def set_current_range(self, range: float) -> bool:
+        """Set measurement current range
+        Args:
+            range: current range from 0 to 8 Amps
+        Returns:
+            True when argument is invalid
+        """
         if 0 <= range <= 8:
             self.__write_to_dev(f"CURR:RANG {range:.5f}")
             self._fastlog_options["curr_range"] = range
@@ -149,9 +167,21 @@ class DriverNGUX01:
         return True
 
     def get_current_range(self) -> float:
-        return self.__read_from_dev("CURR:RANG?")
+        """Get measurement current range
+        Args:
+            N/A
+        Returns:
+            Range from 0 to 8 Amps
+        """
+        return float(self.__read_from_dev("CURR:RANG?"))
 
     def set_fastlog_sample_rate(self, rate: float) -> bool:
+        """Set sample rate of FastLog
+        Args:
+            rate: Either 500, 250, 50, 10, 1 or 0.1 kilosamples per second
+        Returns:
+            True when argument is invalid
+        """
         rate = int(rate * 1000)
         if rate not in (100, 1000, 10000, 50000, 250000, 500000):
             return True
@@ -163,21 +193,59 @@ class DriverNGUX01:
         return False
 
     def get_fastlog_sample_rate(self) -> float:
-        return self.__read_from_dev("FLOG:SRAT?")
+        """Get sample rate of FastLog
+        Args:
+            N/A
+        Returns:
+            FastLog sample rate in kilosamples per second
+        """
+        rate = self.__read_from_dev("FLOG:SRAT?")[1:]   # rate has format "S###[k]", get rid of the S
+        if rate[-1] == 'k':
+            return float(rate[:-1])
+        else:
+            return 0.1
 
-    def set_fastlog_duration(self, duration: int):
+    def set_fastlog_duration(self, duration: int) -> None:
+        """Set duration of a FastLog sample
+        Args:
+            duration: Sample duration in seconds
+        Returns:
+            None
+        """
         self.__write_to_dev(f"FLOG:STIM {duration}")
         self._fastlog_options["duration"] = duration
 
     def get_fastlog_duration(self) -> int:
-        return self.__read_from_dev("FLOG:STIM?")
+        """Get duration of a FastLog sample
+        Args:
+            N/A
+        Returns:
+            Duration in seconds
+        """
+        return float(self.__read_from_dev("FLOG:STIM?"))
 
     def get_fastlog_options(self):
+        """Get a copy of the currently set FastLog options
+        Args:
+            N/A
+        Returns:
+            Dictionary of FastLog options
+        """
         return self._fastlog_options.copy()
 
     def set_fastlog_options(self, options: dict) -> None:
+        """Set FastLog options using a dictionary. Any amount of options may be
+        left out, any additional entries that don't belong in the FastLog options
+        are ignored.
+        Args:
+            options: Dictionary of FastLog options, that is,
+                "volt_range", "curr_range", "sample_rate" and/or "duration"
+        Returns:
+            None
+        """
         names = ["volt_range", "curr_range", "sample_rate", "duration"]
-        funcs = [self.set_voltage_range, self.set_current_range, self.set_fastlog_sample_rate, self.set_fastlog_duration]
+        funcs = [self.set_voltage_range, self.set_current_range,
+                 self.set_fastlog_sample_rate, self.set_fastlog_duration]
         for name, func in zip(names, funcs):
             if name in options:
                 func(options[name])
