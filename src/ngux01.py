@@ -27,9 +27,15 @@ class DriverNGUX01:
     _volt_range = [-20.0, 20.0]
     _curr_range = [-0.1, 0.1]
     _device_name_chck = "NGU"
+    _fastlog_options: dict
 
     def __init__(self):
-        pass
+        self._fastlog_options = {
+            "volt_range": self.get_voltage_range(),
+            "curr_range": self.get_current_range(),
+            "sample_rate": self.get_fastlog_sample_rate(),
+            "duration": self.get_fastlog_duration()
+        }
 
     def __write_to_dev(self, order: str) -> None:
         self.SerialDevice.write(order)
@@ -124,6 +130,57 @@ class DriverNGUX01:
         else:
             time = self.__read_from_dev('SYST:TIME?').split(',')
             print(f"System time: {int(time[0]):02d}:{int(time[1]):02d},{int(time[2]):02d}")
+
+    def set_voltage_range(self, range: float) -> bool:
+        if 0 <= range <= 20.005:
+            self.__write_to_dev(f"VOLT:RANG {range:.5f}")
+            self._fastlog_options["volt_range"] = range
+            return False
+        return True
+
+    def get_voltage_range(self) -> float:
+        return self.__read_from_dev("VOLT:RANG?")
+
+    def set_current_range(self, range: float) -> bool:
+        if 0 <= range <= 8:
+            self.__write_to_dev(f"CURR:RANG {range:.5f}")
+            self._fastlog_options["curr_range"] = range
+            return False
+        return True
+
+    def get_current_range(self) -> float:
+        return self.__read_from_dev("CURR:RANG?")
+
+    def set_fastlog_sample_rate(self, rate: float) -> bool:
+        rate = int(rate * 1000)
+        if rate not in (100, 1000, 10000, 50000, 250000, 500000):
+            return True
+        if rate == 100:
+            self.__write_to_dev("FLOG:SRAT S100")
+        else:
+            self.__write_to_dev(f"FLOG:SRAT S{rate}k")
+        self._fastlog_options["sample_rate"] = rate
+        return False
+
+    def get_fastlog_sample_rate(self) -> float:
+        return self.__read_from_dev("FLOG:SRAT?")
+
+    def set_fastlog_duration(self, duration: int):
+        self.__write_to_dev(f"FLOG:STIM {duration}")
+        self._fastlog_options["duration"] = duration
+
+    def get_fastlog_duration(self) -> int:
+        return self.__read_from_dev("FLOG:STIM?")
+
+    def get_fastlog_options(self):
+        return self._fastlog_options.copy()
+
+    def set_fastlog_options(self, options: dict) -> None:
+        names = ["volt_range", "curr_range", "sample_rate", "duration"]
+        funcs = [self.set_voltage_range, self.set_current_range, self.set_fastlog_sample_rate, self.set_fastlog_duration]
+        for name, func in zip(names, funcs):
+            if name in options:
+                func(options[name])
 
     def set_voltage(self, val: float) -> None:
         """Setting the channel voltage value"""
@@ -239,7 +296,17 @@ class DriverNGUX01:
                 print(f"... meas. energy: {1e3 * val:.6f} mWh")
             return val
 
-    def do_fastlog(self):
+    def do_fastlog(self, volt_range=None, curr_range=None, sample_rate=None, duration=None):
+        options = {}
+        if volt_range is not None:
+            options['volt_range'] = volt_range
+        if curr_range is not None:
+            options['curr_range'] = curr_range
+        if sample_rate is not None:
+            options['sample_rate'] = sample_rate
+        if duration is not None:
+            options['duration'] = duration
+        self.set_fastlog_options(options)
         self.__write_to_dev("FLOG 1")
 
 
