@@ -30,12 +30,7 @@ class DriverNGUX01:
     _fastlog_options: dict
 
     def __init__(self):
-        self._fastlog_options = {
-            "volt_range": self.get_voltage_range(),
-            "curr_range": self.get_current_range(),
-            "sample_rate": self.get_fastlog_sample_rate(),
-            "duration": self.get_fastlog_duration()
-        }
+        pass
 
     def __write_to_dev(self, order: str) -> None:
         self.SerialDevice.write(order)
@@ -50,6 +45,12 @@ class DriverNGUX01:
             if do_reset:
                 self.do_reset()
             self.__write_to_dev("SYST:MIX")
+            self._fastlog_options = {
+                "volt_range": self.get_voltage_range(),
+                "curr_range": self.get_current_range(),
+                "sample_rate": self.get_fastlog_sample_rate(),
+                "duration": self.get_fastlog_duration()
+            }
             print(f"Right device is selected with: {self.get_id(False)}")
         else:
             print("Not right selected device. Please check!")
@@ -61,6 +62,9 @@ class DriverNGUX01:
             self.SerialActive = True
         else:
             self.SerialActive = False
+
+    def __float_eq(self, x, y, epsilon=0.00000001):
+        return abs(x - y) < epsilon
 
     def serial_open_known_target(self, resource_name: str, do_reset=False) -> None:
         """Open the serial connection to device"""
@@ -131,15 +135,15 @@ class DriverNGUX01:
             time = self.__read_from_dev('SYST:TIME?').split(',')
             print(f"System time: {int(time[0]):02d}:{int(time[1]):02d},{int(time[2]):02d}")
 
-    def set_voltage_range(self, range: float) -> bool:
+    def set_voltage_range(self, range: int) -> bool:
         """Set measurement voltage range
         Args:
-            range: voltage range from 0 to 20 Volts
+            range: voltage range 6 or 20 volts
         Returns:
             True when argument is invalid
         """
-        if 0 <= range <= 20:
-            self.__write_to_dev(f"VOLT:RANG {range:.5f}")
+        if range in (6,20):
+            self.__write_to_dev(f"VOLT:RANG {range}")
             self._fastlog_options["volt_range"] = range
             return False
         return True
@@ -149,21 +153,23 @@ class DriverNGUX01:
         Args:
             N/A
         Returns:
-            Range from 0 to 20 Volts
+            Range 6 or 20 volts
         """
         return float(self.__read_from_dev("VOLT:RANG?"))
 
     def set_current_range(self, range: float) -> bool:
         """Set measurement current range
         Args:
-            range: current range from 0 to 8 Amps
+            range: current range 2, 0.1 or 0.01
         Returns:
             True when argument is invalid
         """
-        if 0 <= range <= 8:
-            self.__write_to_dev(f"CURR:RANG {range:.5f}")
-            self._fastlog_options["curr_range"] = range
-            return False
+        available_ranges = ["2", "0.1", "0.01"]
+        for x in available_ranges:
+            if self.__float_eq(range, float(x)):
+                self.__write_to_dev(f"CURR:RANG {x}")
+                self._fastlog_options["curr_range"] = range
+                return False
         return True
 
     def get_current_range(self) -> float:
@@ -182,13 +188,12 @@ class DriverNGUX01:
         Returns:
             True when argument is invalid
         """
-        rate = int(rate * 1000)
-        if rate not in (100, 1000, 10000, 50000, 250000, 500000):
-            return True
-        if rate == 100:
+        if self.__float_eq(rate, 0.1):
             self.__write_to_dev("FLOG:SRAT S100")
-        else:
+        elif rate in (1, 10, 50, 250, 500):
             self.__write_to_dev(f"FLOG:SRAT S{rate}k")
+        else:
+            return True
         self._fastlog_options["sample_rate"] = rate
         return False
 
@@ -199,7 +204,7 @@ class DriverNGUX01:
         Returns:
             FastLog sample rate in kilosamples per second
         """
-        rate = self.__read_from_dev("FLOG:SRAT?")[1:]   # rate has format "S###[k]", get rid of the S
+        rate = self.__read_from_dev("FLOG:SRAT?").strip()[1:]   # rate has format "S###[k]", get rid of the S
         if rate[-1] == 'k':
             return float(rate[:-1])
         else:
@@ -212,6 +217,7 @@ class DriverNGUX01:
         Returns:
             None
         """
+        # doesn't work??
         self.__write_to_dev(f"FLOG:STIM {duration}")
         self._fastlog_options["duration"] = duration
 
@@ -383,6 +389,9 @@ if __name__ == "__main__":
 
     dev = DriverNGUX01()
     dev.serial_start()
-    dev.do_fastlog()
+    #dev.do_fastlog(volt_range=13, curr_range=9, sample_rate=10, duration=3)
+    print(dev.get_fastlog_duration())
+    dev.set_fastlog_duration(5000)
+    print(dev.get_fastlog_duration())
     dev.serial_close()
 
