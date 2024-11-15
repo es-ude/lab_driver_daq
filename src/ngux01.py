@@ -27,7 +27,6 @@ class DriverNGUX01:
     _volt_range = [-20.0, 20.0]
     _curr_range = [-0.1, 0.1]
     _device_name_chck = "NGU"
-    _fastlog_options: dict
 
     def __init__(self):
         pass
@@ -45,12 +44,6 @@ class DriverNGUX01:
             if do_reset:
                 self.do_reset()
             self.__write_to_dev("SYST:MIX")
-            self._fastlog_options = {
-                "volt_range": self.get_voltage_range(),
-                "curr_range": self.get_current_range(),
-                "sample_rate": self.get_fastlog_sample_rate(),
-                "duration": self.get_fastlog_duration()
-            }
             print(f"Right device is selected with: {self.get_id(False)}")
         else:
             print("Not right selected device. Please check!")
@@ -144,7 +137,6 @@ class DriverNGUX01:
         """
         if range in (6,20):
             self.__write_to_dev(f"VOLT:RANG {range}")
-            self._fastlog_options["volt_range"] = range
             return False
         return True
 
@@ -168,7 +160,6 @@ class DriverNGUX01:
         for x in available_ranges:
             if self.__float_eq(range, float(x)):
                 self.__write_to_dev(f"CURR:RANG {x}")
-                self._fastlog_options["curr_range"] = range
                 return False
         return True
 
@@ -194,7 +185,6 @@ class DriverNGUX01:
             self.__write_to_dev(f"FLOG:SRAT S{rate}k")
         else:
             return True
-        self._fastlog_options["sample_rate"] = rate
         return False
 
     def get_fastlog_sample_rate(self) -> float:
@@ -218,8 +208,9 @@ class DriverNGUX01:
             None
         """
         # doesn't work??
-        self.__write_to_dev(f"FLOG:STIM {duration}")
-        self._fastlog_options["duration"] = duration
+        # for some reason, setting the duration causes other FastLog settings like sample
+        # rate to be reset, the duration itself is also not applied
+        ## self.__write_to_dev(f"FLOG:STIM {duration}")
 
     def get_fastlog_duration(self) -> int:
         """Get duration of a FastLog sample
@@ -229,32 +220,6 @@ class DriverNGUX01:
             Duration in seconds
         """
         return float(self.__read_from_dev("FLOG:STIM?"))
-
-    def get_fastlog_options(self):
-        """Get a copy of the currently set FastLog options
-        Args:
-            N/A
-        Returns:
-            Dictionary of FastLog options
-        """
-        return self._fastlog_options.copy()
-
-    def set_fastlog_options(self, options: dict) -> None:
-        """Set FastLog options using a dictionary. Any amount of options may be
-        left out, any additional entries that don't belong in the FastLog options
-        are ignored.
-        Args:
-            options: Dictionary of FastLog options, that is,
-                "volt_range", "curr_range", "sample_rate" and/or "duration"
-        Returns:
-            None
-        """
-        names = ["volt_range", "curr_range", "sample_rate", "duration"]
-        funcs = [self.set_voltage_range, self.set_current_range,
-                 self.set_fastlog_sample_rate, self.set_fastlog_duration]
-        for name, func in zip(names, funcs):
-            if name in options:
-                func(options[name])
 
     def set_voltage(self, val: float) -> None:
         """Setting the channel voltage value"""
@@ -370,18 +335,20 @@ class DriverNGUX01:
                 print(f"... meas. energy: {1e3 * val:.6f} mWh")
             return val
 
-    def do_fastlog(self, volt_range=None, curr_range=None, sample_rate=None, duration=None):
-        options = {}
-        if volt_range is not None:
-            options['volt_range'] = volt_range
-        if curr_range is not None:
-            options['curr_range'] = curr_range
-        if sample_rate is not None:
-            options['sample_rate'] = sample_rate
+    def do_fastlog(self, sample_rate:float=None, duration:int=None) -> bool:
+        """Start a FastLog measurement
+        Args:
+            sample_rate: Optional; set a sample rate before measuring
+            duration: Optional; set the duration of the measurement
+        Returns:
+            True when arguments are invalid
+        """
+        if sample_rate is not None and self.set_fastlog_sample_rate(sample_rate):
+            return True
         if duration is not None:
-            options['duration'] = duration
-        self.set_fastlog_options(options)
+            self.set_fastlog_duration(duration)
         self.__write_to_dev("FLOG 1")
+        return False
 
 
 if __name__ == "__main__":
@@ -390,8 +357,13 @@ if __name__ == "__main__":
     dev = DriverNGUX01()
     dev.serial_start()
     #dev.do_fastlog(volt_range=13, curr_range=9, sample_rate=10, duration=3)
-    print(dev.get_fastlog_duration())
-    dev.set_fastlog_duration(5000)
-    print(dev.get_fastlog_duration())
+    #print(dev.get_fastlog_duration())
+    #dev.set_fastlog_duration(5000)
+    #print(dev.get_fastlog_duration())
+    #dev.set_fastlog_duration(4)
+    dev.set_fastlog_sample_rate(500)
+
+    print(dev.get_fastlog_sample_rate())
+    print(dev.do_fastlog(10, 4))
     dev.serial_close()
 
