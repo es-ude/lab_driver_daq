@@ -207,10 +207,7 @@ class DriverNGUX01:
         Returns:
             None
         """
-        # doesn't work??
-        # for some reason, setting the duration causes other FastLog settings like sample
-        # rate to be reset, the duration itself is also not applied
-        ## self.__write_to_dev(f"FLOG:STIM {duration}")
+        self.__write_to_dev(f"FLOG:FILE:DUR {duration}")
 
     def get_fastlog_duration(self) -> int:
         """Get duration of a FastLog sample
@@ -350,6 +347,15 @@ class DriverNGUX01:
         self.__write_to_dev("FLOG 1")
         return False
 
+    def abort_fastlog(self) -> None:
+        """Abort a running FastLog measurement. Progress is saved.
+        Args:
+            N/A
+        Returns:
+            None
+        """
+        self.__write_to_dev("FLOG 0")
+
 
 if __name__ == "__main__":
     scan_instruments()
@@ -364,6 +370,8 @@ if __name__ == "__main__":
     dev.set_fastlog_sample_rate(500)
 
     print(dev.get_fastlog_sample_rate())
-    print(dev.do_fastlog(10, 4))
+    print(dev.do_fastlog(50, 100))
+    sleep(3)
+    dev.abort_fastlog()
     dev.serial_close()
 
