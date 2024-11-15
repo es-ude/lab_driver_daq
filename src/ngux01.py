@@ -218,6 +218,12 @@ class DriverNGUX01:
         """
         return float(self.__read_from_dev("FLOG:STIM?"))
 
+    def set_fastlog_triggered(self, triggered: bool) -> None:
+        self.__write_to_dev(f"FLOG:TRIG {int(triggered)}")
+
+    def get_fastlog_triggered(self) -> bool:
+        return bool(int(self.__read_from_dev("FLOG:TRIG?")))
+
     def set_voltage(self, val: float) -> None:
         """Setting the channel voltage value"""
         if not self.SerialActive:
@@ -362,16 +368,10 @@ if __name__ == "__main__":
 
     dev = DriverNGUX01()
     dev.serial_start()
-    #dev.do_fastlog(volt_range=13, curr_range=9, sample_rate=10, duration=3)
-    #print(dev.get_fastlog_duration())
-    #dev.set_fastlog_duration(5000)
-    #print(dev.get_fastlog_duration())
-    #dev.set_fastlog_duration(4)
-    dev.set_fastlog_sample_rate(500)
-
-    print(dev.get_fastlog_sample_rate())
-    print(dev.do_fastlog(50, 100))
-    sleep(3)
-    dev.abort_fastlog()
+    print(dev.get_fastlog_triggered())
+    dev.set_fastlog_triggered(True)
+    print(dev.get_fastlog_triggered())
+    dev.set_fastlog_triggered(False)
+    print(dev.get_fastlog_triggered())
     dev.serial_close()
 
