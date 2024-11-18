@@ -4,6 +4,8 @@ import pyvisa
 import platform
 from RsInstrument import RsInstrument
 
+KHz = 1000
+MHz = 1000000
 
 def scan_instruments(do_print=True) -> list:
     """Scanning the VISA bus for instruments
@@ -33,6 +35,7 @@ class DriverMXO4X:
     SerialDevice: pyvisa.Resource | RsInstrument
     SerialActive = False
     _device_name_chck = "MXO"
+    _gen_index = 1      # which generator to configure if none is explicitly stated
 
     def __init__(self):
         pass
@@ -77,6 +80,15 @@ class DriverMXO4X:
         """Checking the IDN"""
         id_back = self.get_id(False)
         self.SerialActive = self._device_name_chck in id_back
+
+    def __switch_state(self, state: bool) -> None:
+        return "ON" if state else "OFF"
+
+    def __fix_index(self, gen_index: int) -> int:
+        if gen_index is None or gen_index not in (1,2):
+            return self._gen_index
+        else:
+            return gen_index
 
     def serial_open_known_target(self, resource_name: str, do_reset=False) -> None:
         """Open the serial connection to device
@@ -179,6 +191,131 @@ class DriverMXO4X:
         """
         self.__write_to_dev(f"SYST:DISP:MESS:STAT ON")
         self.__write_to_dev(f"SYST:DISP:MESS '{text}'")
+
+    def gen_set_default_index(self, gen_index: int) -> bool:
+        """Set which generator is affected by any of the gen_* functions by default
+        Args:
+            gen_index: index of new default generator: 1 or 2
+        Returns:
+            True if generator index is not 1 or 2
+        """
+        if gen_index not in (1,2):
+            return True
+        self._gen_index = gen_index
+        return False
+
+    def gen_get_default_index(self) -> int:
+        """Get which generator is currently set as the default
+        Args:
+            N/A
+        Returns:
+            Default generator's index: 1 or 2
+        """
+        return self._gen_index
+
+    def gen_enable(self, gen_index: int = None) -> None:
+        """Enable waveform generator
+        Args:
+            gen_index: index of the target generator to affect (None for default)
+        Returns:
+            None
+        """
+        gen_index = self.__fix_index(gen_index)
+        self.__write_to_dev(f"WGEN{gen_index} ON")
+
+    def gen_disable(self, gen_index: int = None) -> None:
+        """Disable waveform generator
+        Args:
+            gen_index: index of the target generator to affect (None for default)
+        Returns:
+            None
+        """
+        gen_index = self.__fix_index(gen_index)
+        self.__write_to_dev(f"WGEN{gen_index} OFF")
+
+    def gen_function(self, waveform: str, gen_index: int = None) -> bool:
+        """Select type of waveform function to be generated (case-insensitive)
+        Args:
+            waveform: SINE/SIN for sine function;
+                SQUARE/SQU for square function;
+                RAMP for ramp function;
+                DC for DC function;
+                PULSE/PULS for pulse function;
+                CARDINAL/SINC for cardinal sine function;
+                CARDIAC/CARD for cardiac function;
+                GAUSS/GAUS for gaussian function;
+                LORENTZ/LORN for lorentz function;
+                EXP RISE/EXPR for exponential rise function;
+                EXP FALL/EXPF for exponential fall function;
+                ARBITRARY/ARB for arbitrary function
+            gen_index: index of the target generator to affect (None for default)
+        Returns:
+            True if waveform function is invalid
+        """
+        functions = {
+            "SINE": "SIN", "SQUARE": "SQU", "RAMP": "RAMP", "DC": "DC", "PULSE": "PULS",
+            "CARDINAL": "SINC", "CARDIAC": "CARD", "GAUSS": "GAUS", "LORENTZ": "LORN",
+            "EXP RISE": "EXPR", "EXP FALL": "EXPF", "ARBITRARY": "ARB"
+        }
+        for value in functions.values():
+            functions[value] = value    # make it possible to use the abbreviations as well
+        if waveform.upper() not in functions:
+            return True
+        gen_index = self.__fix_index(gen_index)
+        self.__write_to_dev(f"WGEN{gen_index}:FUNC {functions[waveform.upper()]}")
+        return False
+
+    def gen_frequency(self, frequency: float, gen_index: int = None) -> None:
+        """Set frequency of waveform
+        Args:
+            frequency: frequency in Hz from [0.001,10^8], 0.001 increment
+            gen_index: index of the target generator to affect (None for default)
+        Returns:
+            None
+        """
+        gen_index = self.__fix_index(gen_index)
+        self.__write_to_dev(f"WGEN{gen_index}:FREQ {frequency:.3f}")
+
+    def gen_amplitude(self, amplitude: float, gen_index: int = None) -> bool:
+        """Set amplitude of waveform
+        Args:
+            amplitude: amplitude in volt from [0.01,12], 0.01 increment
+            gen_index: index of the target generator to affect (None for default)
+        Returns:
+            True if amplitude out of range
+        """
+        if not (0.01 <= amplitude <= 12):
+            return True
+        gen_index = self.__fix_index(gen_index)
+        self.__write_to_dev(f"WGEN{gen_index}:VOLT {amplitude:.2f}")
+        return False
+
+    def gen_offset(self, offset: float, gen_index: int = None) -> bool:
+        """Set vertical offset of generated waveform
+        Args:
+            offset: vertical offset in volt from [-5.995,+5.995], 0.01 increment
+            gen_index: index of the target generator to affect (None for default)
+        Returns:
+            True if offset out of range
+        """
+        if not (-5.995 <= offset <= 5.995):
+            return True
+        gen_index = self.__fix_index(gen_index)
+        self.__write_to_dev(f"WGEN{gen_index}:VOLT:OFFS {offset:.2f}")
+        return False
+
+    def gen_preset(self, gen_index: int = None) -> None:
+        """Preset the generator to a default setup including following settings:
+        Sine wavefunction, 1 MHz frequency and 1 Vpp amplitude
+        Args:
+            gen_index: index of the target generator to affect (None for default)
+        Returns:
+            None
+        """
+        gen_index = self.__fix_index(gen_index)
+        self.__write_to_dev(f"WGEN{gen_index}:PRES")
+
+
 
 
 if __name__ == "__main__":
