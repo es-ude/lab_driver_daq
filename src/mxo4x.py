@@ -36,6 +36,7 @@ class DriverMXO4X:
     SerialActive = False
     _device_name_chck = "MXO"
     _gen_index = 1      # which generator to configure if none is explicitly stated
+    _logic_group = 1    # which logic group to configure if none is explicitly stated
 
     def __init__(self):
         pass
@@ -81,14 +82,17 @@ class DriverMXO4X:
         id_back = self.get_id(False)
         self.SerialActive = self._device_name_chck in id_back
 
-    def __switch_state(self, state: bool) -> None:
-        return "ON" if state else "OFF"
-
-    def __fix_index(self, gen_index: int) -> int:
+    def __fix_gen_index(self, gen_index: int) -> int:
         if gen_index is None or gen_index not in (1,2):
             return self._gen_index
         else:
             return gen_index
+
+    def __fix_logic_index(self, logic_group: int) -> int:
+        if logic_group is None or logic_group not in (1,2,3,4):
+            return self._logic_group
+        else:
+            return logic_group
 
     def serial_open_known_target(self, resource_name: str, do_reset=False) -> None:
         """Open the serial connection to device
@@ -221,7 +225,7 @@ class DriverMXO4X:
         Returns:
             None
         """
-        gen_index = self.__fix_index(gen_index)
+        gen_index = self.__fix_gen_index(gen_index)
         self.__write_to_dev(f"WGEN{gen_index} ON")
 
     def gen_disable(self, gen_index: int = None) -> None:
@@ -231,7 +235,7 @@ class DriverMXO4X:
         Returns:
             None
         """
-        gen_index = self.__fix_index(gen_index)
+        gen_index = self.__fix_gen_index(gen_index)
         self.__write_to_dev(f"WGEN{gen_index} OFF")
 
     def gen_function(self, waveform: str, gen_index: int = None) -> bool:
@@ -262,7 +266,7 @@ class DriverMXO4X:
             functions[value] = value    # make it possible to use the abbreviations as well
         if waveform.upper() not in functions:
             return True
-        gen_index = self.__fix_index(gen_index)
+        gen_index = self.__fix_gen_index(gen_index)
         self.__write_to_dev(f"WGEN{gen_index}:FUNC {functions[waveform.upper()]}")
         return False
 
@@ -274,7 +278,7 @@ class DriverMXO4X:
         Returns:
             None
         """
-        gen_index = self.__fix_index(gen_index)
+        gen_index = self.__fix_gen_index(gen_index)
         self.__write_to_dev(f"WGEN{gen_index}:FREQ {frequency:.3f}")
 
     def gen_amplitude(self, amplitude: float, gen_index: int = None) -> bool:
@@ -288,7 +292,7 @@ class DriverMXO4X:
         if not (0.01 <= amplitude <= 12):
             return True
         amplitude /= 1.08   # constant factor to fix offset
-        gen_index = self.__fix_index(gen_index)
+        gen_index = self.__fix_gen_index(gen_index)
         self.__write_to_dev(f"WGEN{gen_index}:VOLT {amplitude:.2f}")
         return False
 
@@ -302,7 +306,7 @@ class DriverMXO4X:
         """
         if not (-5.995 <= offset <= 5.995):
             return True
-        gen_index = self.__fix_index(gen_index)
+        gen_index = self.__fix_gen_index(gen_index)
         self.__write_to_dev(f"WGEN{gen_index}:VOLT:OFFS {offset:.2f}")
         return False
 
@@ -314,8 +318,46 @@ class DriverMXO4X:
         Returns:
             None
         """
-        gen_index = self.__fix_index(gen_index)
+        gen_index = self.__fix_gen_index(gen_index)
         self.__write_to_dev(f"WGEN{gen_index}:PRES")
+
+    def dig_technology(self, tech, logic_group: int = None) -> bool:
+        """Select threshold voltage for various types of circuits and apply to all digital channels
+        Args:
+            tech:
+                 15: TTL
+                 25: CMOS 5.0 V
+                165: CMOS 3.3 V
+                125: CMOS 2.5 V
+                 09: CMOS 1.85 V
+                -13: ECL, -1.3 V
+                 38: PECL
+                 20: LVPECL
+                  0: Ground
+            logic_group: index of logic group to configure
+        Returns:
+            True if selected technology is unsupported
+        """
+        valid_techs = (15,25,165,125,9,-13,38,20,0)
+        if tech not in valid_techs:
+            return True
+        logic_group = self.__fix_logic_index(logic_group)
+        self.__write_to_dev(f"PBUS{logic_group}:TECH V{'M' if tech < 0 else ''}{tech}")
+        return False
+
+    def __dig_activation_state(self, bit: int, enable: bool, logic_group: int = None) -> bool:
+        if not (0 <= bit < 16):
+            return True
+        logic_group = self.__fix_logic_index(logic_group)
+        self.__write_to_dev(f"PBUS{logic_group}:BIT{bit} {int(enable)}")
+        return False
+
+    def dig_enable(self, bit: int, logic_group: int = None) -> bool:
+        self.__dig_activation_state(bit, True, logic_group)
+
+    def dig_disable(self, bit: int, logic_group: int = None) -> bool:
+        self.__dig_activation_state(bit, False, logic_group)
+
 
     def live_command_mode(self):
         print("----- LIVE COMMAND MODE -----")
@@ -326,6 +368,12 @@ class DriverMXO4X:
             except:
                 print("- Command failed. Try again.")
         print("----- END OF LIVE COMMAND MODE -----")
+
+    def test(self, cmd):
+        if '?' in cmd:
+            print(self.__read_from_dev(cmd))
+        else:
+            self.__write_to_dev(cmd)
 
 
 if __name__ == "__main__":
