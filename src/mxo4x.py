@@ -181,6 +181,7 @@ class DriverMXO4X:
             None
         """
         self.__write_to_dev(f"SYST:DISP:UPD {int(show_display)}")
+        sleep(2 if show_display else 1)
 
     def change_remote_text(self, text: str) -> None:
         """Display an additional text in remote control
@@ -286,6 +287,7 @@ class DriverMXO4X:
         """
         if not (0.01 <= amplitude <= 12):
             return True
+        amplitude /= 1.08   # constant factor to fix offset
         gen_index = self.__fix_index(gen_index)
         self.__write_to_dev(f"WGEN{gen_index}:VOLT {amplitude:.2f}")
         return False
@@ -315,7 +317,15 @@ class DriverMXO4X:
         gen_index = self.__fix_index(gen_index)
         self.__write_to_dev(f"WGEN{gen_index}:PRES")
 
-
+    def live_command_mode(self):
+        print("----- LIVE COMMAND MODE -----")
+        print("---- type 'exit' to stop ----")
+        while "exit" not in (cmd := input()):
+            try:
+                exec(cmd)
+            except:
+                print("- Command failed. Try again.")
+        print("----- END OF LIVE COMMAND MODE -----")
 
 
 if __name__ == "__main__":
@@ -326,9 +336,12 @@ if __name__ == "__main__":
     inst0.get_id()
 
     inst0.do_reset()
-    sleep(1)
-
-    inst0.change_display_mode(False)
+    inst0.change_display_mode(True)
     inst0.change_remote_text("Hello World!")
+
+    inst0.gen_preset()
+    inst0.gen_enable()
+    inst0.live_command_mode()
+
 
     inst0.serial_close()
