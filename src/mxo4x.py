@@ -321,6 +321,27 @@ class DriverMXO4X:
         gen_index = self.__fix_gen_index(gen_index)
         self.__write_to_dev(f"WGEN{gen_index}:PRES")
 
+    def dig_set_default_logic_group(self, logic_group: int) -> bool:
+        """Set the default logic group that shall be configured by dig_* functions
+        Args:
+            logic_group: default logic group (1-4)
+        Returns:
+            True if given group does not exist
+        """
+        if logic_group not in (1,2,3,4):
+            return True
+        self._logic_group = logic_group
+        return False
+
+    def dig_get_default_logic_group(self) -> int:
+        """Get the currently set default logic group
+        Args:
+            N/A
+        Returns:
+            Logic group from 1 to 4
+        """
+        return self._logic_group
+
     def dig_technology(self, tech, logic_group: int = None) -> bool:
         """Select threshold voltage for various types of circuits and apply to all digital channels
         Args:
@@ -343,6 +364,24 @@ class DriverMXO4X:
             return True
         logic_group = self.__fix_logic_index(logic_group)
         self.__write_to_dev(f"PBUS{logic_group}:TECH V{'M' if tech < 0 else ''}{tech}")
+        return False
+
+    def dig_threshold(self, threshold: float, channel_group: int, logic_group: int = None) -> bool:
+        """Manually set a logical threshold voltage for some channel group
+        Args:
+            threshold: threshold voltage in volt in range [-8,+8]
+            channel_group: 1 = digital channels 0..3
+                2 = digital channels 4..7
+                3 = digital channels 8..11
+                4 = digital channels 12..15
+            logic_group: index of logic group to configure
+        Returns:
+            True if channel group is invalid or threshold out of range
+        """
+        if channel_group not in (1,2,3,4) or not (-8 <= threshold <= 8):
+            return True
+        logic_group = self.__fix_logic_index(logic_group)
+        self.__write_to_dev(f"PBUS{logic_group}:THR{channel_group} {threshold}")
         return False
 
     def __dig_activation_state(self, bit: int, enable: bool, logic_group: int = None) -> bool:
@@ -379,17 +418,17 @@ class DriverMXO4X:
 if __name__ == "__main__":
     scan_instruments()
 
-    inst0 = DriverMXO4X()
-    inst0.serial_start()
-    inst0.get_id()
+    d = DriverMXO4X()
+    d.serial_start()
+    d.get_id()
 
-    inst0.do_reset()
-    inst0.change_display_mode(True)
-    inst0.change_remote_text("Hello World!")
+    d.do_reset()
+    d.change_display_mode(True)
+    d.change_remote_text("Hello World!")
 
-    inst0.gen_preset()
-    inst0.gen_enable()
-    inst0.live_command_mode()
+    d.gen_preset()
+    d.gen_enable()
+    d.live_command_mode()
 
 
-    inst0.serial_close()
+    d.serial_close()
