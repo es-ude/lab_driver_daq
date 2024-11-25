@@ -390,19 +390,32 @@ class DriverMXO4X:
         self.__write_to_dev(f"PBUS{logic_group}:THR{channel_group} {threshold}")
         return False
 
-    def __dig_activation_state(self, bit: int, enable: bool, logic_group: int = None) -> bool:
-        if not (0 <= bit < 16):
-            return True
+    def __dig_activation_state(self, bits, enable: bool, logic_group: int = None) -> bool:
         logic_group = self.__fix_logic_index(logic_group)
-        self.__write_to_dev(f"PBUS{logic_group}:BIT{bit} {int(enable)}")
-        return False
+        if type(bits) == int and bits in range(16):
+            self.__write_to_dev(f"PBUS{logic_group}:BIT{bits} {int(enable)}")
+            return False
+        else:
+            try:
+                for bit in filter(lambda x: x in range(16), bits):
+                    self.__write_to_dev(f"PBUS{logic_group}:BIT{bit} {int(enable)}")
+                return any(x not in range(16) for x in bits)
+            except:
+                return True
 
-    def dig_enable(self, bit: int, logic_group: int = None) -> bool:
-        self.__dig_activation_state(bit, True, logic_group)
+    def dig_enable(self, bits, logic_group: int = None) -> bool:
+        return self.__dig_activation_state(bits, True, logic_group)
 
-    def dig_disable(self, bit: int, logic_group: int = None) -> bool:
-        self.__dig_activation_state(bit, False, logic_group)
+    def dig_disable(self, bits, logic_group: int = None) -> bool:
+        return self.__dig_activation_state(bits, False, logic_group)
 
+    def dig_show_dig_signals(self, logic_group: int = None) -> None:
+        logic_group = self.__fix_logic_index(logic_group)
+        self.__write_to_dev(f"PBUS{logic_group}:DISP:SHDI ON")
+
+    def dig_hide_dig_signals(self, logic_group: int = None) -> None:
+        logic_group = self.__fix_logic_index(logic_group)
+        self.__write_to_dev(f"PBUS{logic_group}:DISP:SHDI OFF")
 
     def live_command_mode(self):
         print("----- LIVE COMMAND MODE -----")
