@@ -350,7 +350,7 @@ class DriverMXO4X:
                  25: CMOS 5.0 V
                 165: CMOS 3.3 V
                 125: CMOS 2.5 V
-                 09: CMOS 1.85 V
+                  9: CMOS 1.85 V
                 -13: ECL, -1.3 V
                  38: PECL
                  20: LVPECL
@@ -363,7 +363,13 @@ class DriverMXO4X:
         if tech not in valid_techs:
             return True
         logic_group = self.__fix_logic_index(logic_group)
-        self.__write_to_dev(f"PBUS{logic_group}:TECH V{'M' if tech < 0 else ''}{tech}")
+        cmd = f"PBUS{logic_group}:TECH "
+        if tech == 9:
+            self.__write_to_dev(cmd + "V09")
+        elif tech == -13:
+            self.__write_to_dev(cmd + "VM13")
+        else:
+            self.__write_to_dev(cmd + f"V{tech}")
         return False
 
     def dig_threshold(self, threshold: float, channel_group: int, logic_group: int = None) -> bool:
