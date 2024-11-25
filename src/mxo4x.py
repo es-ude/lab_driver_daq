@@ -404,9 +404,23 @@ class DriverMXO4X:
                 return True
 
     def dig_enable(self, bits, logic_group: int = None) -> bool:
+        """Enable logic channels
+        Args:
+            bits: Either an int or an iterable of integers denoting the bits to enable
+            logic_group: index of logic group to configure
+        Returns:
+            True if any bit indices are invalid (valid bits are applied)
+        """
         return self.__dig_activation_state(bits, True, logic_group)
 
     def dig_disable(self, bits, logic_group: int = None) -> bool:
+        """Disable logic channels
+        Args:
+            bits: Either an int or an iterable of integers denoting the bits to disable
+            logic_group: index of logic group to configure
+        Returns:
+            True if any bit indices are invalid (valid bits are applied)
+        """
         return self.__dig_activation_state(bits, False, logic_group)
 
     def dig_show_dig_signals(self, logic_group: int = None) -> None:
