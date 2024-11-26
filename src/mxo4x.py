@@ -431,15 +431,44 @@ class DriverMXO4X:
         logic_group = self.__fix_logic_index(logic_group)
         self.__write_to_dev(f"PBUS{logic_group}:DISP:SHDI OFF")
 
+    def dig_hysteresis(self, level, channel_group: int, logic_group: int = None) -> bool:
+        """Set hysteresis size for channels
+        Args:
+            level: level of hysteresis "NORMAL", "ROBUST", "MAXIMUM" or "SMALL",
+                "MEDIUM", "LARGE" or 0, 1, 2; strings are case-insensitive
+            channel_group: 1 = digital channels 0..3
+                2 = digital channels 4..7
+                3 = digital channels 8..11
+                4 = digital channels 12..15
+        Returns:
+            True if channel group or hysteresis is invalid
+        """
+        if channel_group not in (1,2,3,4):
+            return True
+        logic_group = self.__fix_logic_index(logic_group)
+        levels_str = ["NORMAL", "ROBUST", "MAXIMUM"]
+        levels_alt_str = ["SMALL", "MEDIUM", "LARGE"]
+        if type(level) == int and level in range(3):
+            self.__write_to_dev(f"PBUS{logic_group}:HYST{channel_group} {levels_str[level]}")
+        elif type(level) == str and level.upper() in levels_str:
+            self.__write_to_dev(f"PBUS{logic_group}:HYST{channel_group} {level.upper()}")
+        elif type(level) == str and level.upper() in levels_alt_str:
+            normalised_level = levels_str[levels_alt_str.index(level.upper())]
+            self.__write_to_dev(f"PBUS{logic_group}:HYST{channel_group} {normalised_level}")
+        else:
+            return True
+        return False
+
+
     def live_command_mode(self):
-        print("----- LIVE COMMAND MODE -----")
-        print("---- type 'exit' to stop ----")
-        while "exit" not in (cmd := input()):
+        print(">> LIVE COMMAND MODE")
+        print(">> Type 'exit' to stop.")
+        while (cmd := input("> ")).strip() != "exit":
             try:
                 exec(cmd)
             except:
-                print("- Command failed. Try again.")
-        print("----- END OF LIVE COMMAND MODE -----")
+                print(">> Command failed. Try again.")
+        print(">> END OF LIVE COMMAND MODE")
 
     def test(self, cmd):
         if '?' in cmd:
