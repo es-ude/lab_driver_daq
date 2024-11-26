@@ -262,7 +262,7 @@ class DriverMXO4X:
             "CARDINAL": "SINC", "CARDIAC": "CARD", "GAUSS": "GAUS", "LORENTZ": "LORN",
             "EXP RISE": "EXPR", "EXP FALL": "EXPF", "ARBITRARY": "ARB"
         }
-        for value in functions.values():
+        for value in list(functions.values()):
             functions[value] = value    # make it possible to use the abbreviations as well
         if waveform.upper() not in functions:
             return True
@@ -308,6 +308,7 @@ class DriverMXO4X:
             return True
         gen_index = self.__fix_gen_index(gen_index)
         self.__write_to_dev(f"WGEN{gen_index}:VOLT:OFFS {offset:.2f}")
+        self.__write_to_dev(f"WGEN{gen_index}:VOLT:DCL {offset:.2f}")
         return False
 
     def gen_preset(self, gen_index: int = None) -> None:
@@ -466,7 +467,8 @@ class DriverMXO4X:
         while (cmd := input("> ")).strip() != "exit":
             try:
                 exec(cmd)
-            except:
+            except Exception as e:
+                print(e)
                 print(">> Command failed. Try again.")
         print(">> END OF LIVE COMMAND MODE")
 
