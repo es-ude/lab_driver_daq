@@ -37,6 +37,7 @@ class DriverMXO4X:
     _device_name_chck = "MXO"
     _gen_index = 1      # which generator to configure if none is explicitly stated
     _logic_group = 1    # which logic group to configure if none is explicitly stated
+    _output_config = 1  # which screenshot output configuration to use if none is explicitly stated
 
     def __init__(self):
         pass
@@ -460,13 +461,71 @@ class DriverMXO4X:
             return True
         return False
 
+    def __fix_output_config(self, output_config: int) -> int:
+        return output_config if output_config in (1,2) else self._output_config
+
+    def sshot_get_default_config(self):
+        return self._output_config
+
+    def sshot_set_default_config(self, output_config: int) -> bool:
+        if output_config in (1, 2):
+            self._output_config = output_config
+            return False
+        return True
+
+    def sshot_get_filename(self) -> str:
+        return self.__read_from_dev("MMEM:NAME?")
+
+    def sshot_set_filename(self, filename: str) -> None:
+        self.__write_to_dev(f"MMEM:NAME {filename}")
+
+    def sshot_destination(self, dest: str) -> bool:
+        if dest.upper() == "FILE":
+            self.__write_to_dev(f"MMEM:DEST MMEM")
+        elif dest.upper() == "CLIPBOARD":
+            self.__write_to_dev(f"MMEM:DEST CLIPBOARD")
+        else:
+            return True
+        return False
+
+    def sshot_file_format(self, format: str, output_config: int = None) -> bool:
+        output_config = self.__fix_output_config(output_config)
+        if format.upper() not in ("PNG", "JPG"):
+            return True
+        self.__write_to_dev(f"HCOP:DEV{output_config}:LANG {format.upper()}")
+        return False
+
+    def sshot_invert_colours(self, state: bool, output_config: int = None) -> None:
+        output_config = self.__fix_output_config(output_config)
+        self.__write_to_dev(f"HCOP:DEV{output_config}:INV {int(state)}")
+
+    def sshot_white_background(self, state: bool, output_config: int = None) -> None:
+        output_config = self.__fix_output_config(output_config)
+        self.__write_to_dev(f"HCOP:DEV{output_config}:WBKG {int(state)}")
+
+    def sshot_include_signal_bar(self, state: bool, output_config: int = None) -> None:
+        output_config = self.__fix_output_config(output_config)
+        self.__write_to_dev(f"HCOP:DEV{output_config}:ISBA {int(state)}")
+
+    def sshot_include_dialog_box(self, state: bool, output_config: int = None) -> None:
+        output_config = self.__fix_output_config(output_config)
+        self.__write_to_dev(f"HCOP:DEV{output_config}:SSD {int(state)}")
+
+    def sshot_screenshot(self, output_config: int = None) -> None:
+        if int(self.__read_from_dev("SYST:DISP:UPD?")) == 0:
+            self.change_display_mode(True)
+        output_config = self.__fix_output_config(output_config)
+        self.__write_to_dev(f"HCOP:IMM{output_config}")
 
     def live_command_mode(self):
         print(">> LIVE COMMAND MODE")
         print(">> Type 'exit' to stop.")
         while (cmd := input("> ")).strip() != "exit":
             try:
-                exec(cmd)
+                output = {}
+                exec(f"output = {cmd}", globals(), output)
+                if output["output"] is not None:
+                    print(output["output"])
             except Exception as e:
                 print(e)
                 print(">> Command failed. Try again.")
@@ -474,7 +533,7 @@ class DriverMXO4X:
 
     def test(self, cmd):
         if '?' in cmd:
-            print(self.__read_from_dev(cmd))
+            return self.__read_from_dev(cmd)
         else:
             self.__write_to_dev(cmd)
 
