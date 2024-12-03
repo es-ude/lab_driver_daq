@@ -374,7 +374,7 @@ class DriverMXO4X:
             self.__write_to_dev(cmd + f"V{tech}")
         return False
 
-    def dig_threshold(self, threshold: float, channel_group: int, logic_group: int = None) -> bool:
+    def dig_threshold(self, threshold: float, channel_group: int = 1, logic_group: int = None) -> bool:
         """Manually set a logical threshold voltage for some channel group
         Args:
             threshold: threshold voltage in volt in range [-8,+8]
@@ -382,6 +382,7 @@ class DriverMXO4X:
                 2 = digital channels 4..7
                 3 = digital channels 8..11
                 4 = digital channels 12..15
+                No channel group needed when coupling is enabled
             logic_group: index of logic group to configure
         Returns:
             True if channel group is invalid or threshold out of range
@@ -433,7 +434,7 @@ class DriverMXO4X:
         logic_group = self.__fix_logic_index(logic_group)
         self.__write_to_dev(f"PBUS{logic_group}:DISP:SHDI OFF")
 
-    def dig_hysteresis(self, level, channel_group: int, logic_group: int = None) -> bool:
+    def dig_hysteresis(self, level, channel_group: int = 1, logic_group: int = None) -> bool:
         """Set hysteresis size for channels
         Args:
             level: level of hysteresis "NORMAL", "ROBUST", "MAXIMUM" or "SMALL",
@@ -442,6 +443,7 @@ class DriverMXO4X:
                 2 = digital channels 4..7
                 3 = digital channels 8..11
                 4 = digital channels 12..15
+                No channel group needed when coupling is enabled
         Returns:
             True if channel group or hysteresis is invalid
         """
@@ -460,6 +462,33 @@ class DriverMXO4X:
         else:
             return True
         return False
+
+    def dig_hysteresis_coupling(self, state: bool, logic_group: int = None) -> None:
+        logic_group = self.__fix_logic_index(logic_group)
+        self.__write_to_dev(f"PBUS{logic_group}:THC {int(state)}")
+
+    def dig_show_bus(self, logic_group: int = None) -> None:
+        logic_group = self.__fix_logic_index(logic_group)
+        self.__write_to_dev(f"PBUS{logic_group}:DISP:SHBU ON")
+
+    def dig_hide_bus(self, logic_group: int = None) -> None:
+        logic_group = self.__fix_logic_index(logic_group)
+        self.__write_to_dev(f"PBUS{logic_group}:DISP:SHBU OFF")
+
+    def dig_bus_data_format(self, format: str, logic_group: int = None) -> bool:
+        if (format := format.upper()) not in ("HEX", "OCT", "BIN", "ASCII", "SIGNED", "UNSIGNED"):
+            return True
+        if format == "SIGNED":
+            format = "SIGN"
+        elif format == "UNSIGNED":
+            format = "USIG"
+        logic_group = self.__fix_logic_index(logic_group)
+        self.__write_to_dev(f"PBUS{logic_group}:DATA:FORM {format}")
+        return False
+
+    def dig_bus_header(self, logic_group: int = None) -> None:
+        logic_group = self.__fix_logic_index(logic_group)
+        return self.__read_from_dev(f"PBUS{logic_group}:DATA:HEAD?")
 
     def __fix_output_config(self, output_config: int) -> int:
         return output_config if output_config in (1,2) else self._output_config
@@ -511,11 +540,17 @@ class DriverMXO4X:
         output_config = self.__fix_output_config(output_config)
         self.__write_to_dev(f"HCOP:DEV{output_config}:SSD {int(state)}")
 
-    def sshot_screenshot(self, output_config: int = None) -> None:
+    def sshot_capture_now(self, output_config: int = None) -> None:
         if int(self.__read_from_dev("SYST:DISP:UPD?")) == 0:
             self.change_display_mode(True)
         output_config = self.__fix_output_config(output_config)
         self.__write_to_dev(f"HCOP:IMM{output_config}")
+
+    def sshot_capture_next(self, output_config: int = None) -> None:
+        if int(self.__read_from_dev("SYST:DISP:UPD?")) == 0:
+            self.change_display_mode(True)
+        output_config = self.__fix_output_config(output_config)
+        self.__write_to_dev(f"HCOP:IMM{output_config}:NEXT")
 
     def live_command_mode(self):
         print(">> LIVE COMMAND MODE")
