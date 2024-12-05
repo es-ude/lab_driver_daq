@@ -38,6 +38,7 @@ class DriverMXO4X:
     _gen_index = 1      # which generator to configure if none is explicitly stated
     _logic_group = 1    # which logic group to configure if none is explicitly stated
     _output_config = 1  # which screenshot output configuration to use if none is explicitly stated
+    _trig_seq = False   # is trigger source sequence (else single)?
 
     def __init__(self):
         pass
@@ -71,6 +72,7 @@ class DriverMXO4X:
         if self.SerialActive:
             if do_reset:
                 self.do_reset()
+            self._trig_seq = self.__read_from_dev("TRIG:MEV:MODE?") == "SEQ"
             # This command doesn't seem to exist? Windows doesn't throw exceptions on wrong commands,
             # that's why it worked there, but not on Linux
             # self.__write_to_dev("SYST:MIX")   # Instrument error detected: -113,"Undefined header;SYST:MIX"
@@ -94,6 +96,9 @@ class DriverMXO4X:
             return self._logic_group
         else:
             return logic_group
+
+    def __clamp(self, x, y, z):
+        return min(max(x, y), z)
 
     def serial_open_known_target(self, resource_name: str, do_reset=False) -> None:
         """Open the serial connection to device
@@ -551,6 +556,99 @@ class DriverMXO4X:
             self.change_display_mode(True)
         output_config = self.__fix_output_config(output_config)
         self.__write_to_dev(f"HCOP:IMM{output_config}:NEXT")
+
+    def trig_event_mode(self, mode: str) -> bool:
+        """Select whether to trigger on a single event or a sequence of events
+        Args:
+            mode: "SINGLE" or "SEQUENCE" (case-insensitive)
+        Returns:
+            True when mode is invalid
+        """
+        if (mode := mode.upper()) not in ("SINGLE", "SEQUENCE"):
+            return True
+        self.__write_to_dev(f"TRIG:MEV:MODE {mode}")
+        return False
+
+    def trig_source(self, source: str, event: int = 1) -> bool:
+        """Select the source of the trigger signal. Sequence trigger mode only allows analog sources.
+        Args:
+            source: C1, C2, C3, C4 for single or sequence event mode
+                EXT, LINE, Dx for x in [0..15], SBUS1, SBUS2, SBUS3, SBUS4 only for single event mode
+            event: 1 = A-trigger, 2 = B-trigger, 3 = reset event (for sequence trigger)
+        Returns:
+            True if source or event invalid
+        """
+        sources = ([f"C{i}" for i in range(1, 5)] + [f"D{i}" for i in range(16)]
+                   + [f"SBUS{i}" for i in range(1, 5)] + ["EXT", "LINE"])
+        if (self._trig_seq and source not in sources[:4]) or (source not in sources) or (event not in (1,2,3)):
+            return True
+        self.__write_to_dev(f"TRIG:EVEN{event}:SOUR {source}")
+        return False
+
+    def trig_delay(self, delay: float) -> None:
+        """Sets the time that the instrument waits after an A-trigger until it recognises B-triggers
+        Args:
+            delay: delay in seconds
+        Returns:
+            None
+        """
+        delay = self.__clamp(0, delay, 50)
+        self.__write_to_dev(f"TRIG:MEV:SEQ1:DEL {delay}")
+
+    def trig_b_trigger_count(self, count: int) -> None:
+        """
+        Args:
+            count: number of times B-trigger must occur in sequence from 1 to 2147483647
+        Returns:
+            None
+        """
+        count = self.__clamp(1, count, (1 << 31) - 1)
+        self.__write_to_dev(f"TRIG:MEV:SEQ1:COUN {count}")
+
+    def trig_toggle_reset_event(self, state: bool) -> None:
+        """Enable or disable the reset event in sequence event mode
+        Args:
+            state: True to enable, False to disable
+        Returns:
+            None
+        """
+        self.__write_to_dev(f"TRIG:MEV:SEQ3:RES:EVEN {int(state)}")
+
+    def trig_toggle_reset_event_timeout(self, state: bool) -> None:
+        """Toggle whether event sequence shall time out when not receiving enough B-triggers in time
+        Args:
+            state: True to enable reset event by timeout, False to disable
+        Returns:
+            None
+        """
+        self.__write_to_dev(f"TRIG:MEV:SEQ:RES:TIM {int(state)}")
+
+    def trig_reset_event_timeout_time(self, timeout: float) -> None:
+        """Set the time to elapse before reset event by timeout is triggered
+        Args:
+            timeout: Time in seconds from 0 to 50
+        Returns:
+            None
+        """
+        timeout = self.__clamp(0, timeout, 50)
+        self.__write_to_dev(f"TRIG:MEV:SEQ:RES:TIM:TIME {timeout}")
+
+    def trig_sequence_type(self, type: str) -> bool:
+        """Select the type of the trigger sequence
+        Args:
+            type: "A" for single event mode,
+                "ABR" for sequence A → B → R,
+                "AZ" for sequence A → Zone trigger,
+                "ASB" for sequence A → Serial bus
+        Returns:
+            True if sequence type is invalid
+        """
+        if type not in ("A", "ABR", "AZ", "ASB"):
+            return True
+        if type == "A":
+            type = "AONL"
+        self.__write_to_dev("TRIG:MEV:AEV " + type)
+        return False
 
     def live_command_mode(self):
         print(">> LIVE COMMAND MODE")
