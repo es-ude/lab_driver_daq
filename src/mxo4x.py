@@ -1,11 +1,36 @@
+from argparse import ZERO_OR_MORE
+from fcntl import LOCK_WRITE
+from operator import ifloordiv
+from pickle import HIGHEST_PROTOCOL
+from token import LEFTSHIFT, RIGHTSHIFT
+
 import numpy as np
 from time import sleep
 import pyvisa
 import platform
+import sys
 from RsInstrument import RsInstrument
+from numpy.ma.core import argsort
 
 KHz = 1000
 MHz = 1000000
+
+if sys.version_info[:2] >= (3,12):
+    type Threeway = int
+else:
+    Threeway = int
+LEFT: Threeway = -1
+MIDDLE: Threeway = 0
+RIGHT: Threeway = 1
+NEGATIVE: Threeway = -1
+NEUTRAL: Threeway = 0
+POSITIVE: Threeway = 1
+LOW: Threeway = -1
+ZERO: Threeway = 0
+HIGH: Threeway = 1
+OFF: Threeway = 0
+
+
 
 def scan_instruments(do_print=True) -> list:
     """Scanning the VISA bus for instruments
@@ -649,6 +674,102 @@ class DriverMXO4X:
             type = "AONL"
         self.__write_to_dev("TRIG:MEV:AEV " + type)
         return False
+    
+    def trig_edge_direction(self, direction: Threeway, event: int = 1) -> bool:
+        """Set edge direction for trigger
+        Args:
+            direction: NEGATIVE for falling edge, POSITIVE for rising edge,
+                NEUTRAL for either.
+            event: 1 = A-trigger, 2 = B-trigger, 3 = reset event (for sequence trigger)
+        Returns:
+            True if direction or event is invalid
+        """
+        if direction not in (-1,0,1) or event not in (1,2,3):
+            return True
+        args = ["NEG", "EITH", "POS"]
+        self.__write_to_dev(f"TRIG:EVEN{event}:EDGE:SLOP {args[direction + 1]}")
+        return False
+    
+    def trig_edge_level(self, level: float) -> None:
+        """Set external trigger source trigger level
+        Args:
+            level: -5 to 5 volts, value is clamped
+        Returns:
+            None 
+        """
+        level = self.__clamp(-5, level, 5)
+        self.__write_to_dev(f"TRIG:ANED:LEV {level}")
+    
+    def trig_edge_coupling(self, coupling: str) -> bool:
+        """Sets the connection of the external trigger signal, i.e. the
+        input impedance and a termination. The coupling determines what
+        part of the signal is used for triggering.
+        Args:
+            coupling:
+                "DC" - Connection with 50 Ω termination, passes both DC
+                and AC components of the signal.
+                "DCLimit" - Connection with 1 MΩ termination, passes both
+                DC and AC components of the signal.
+                "AC" - Connection with 1 MΩ termination through DC capacitor,
+                removes DC and very low-frequency components. The waveform
+                is centered on zero volts. 
+        Returns:
+            True if coupling mode is invalid
+        """
+        if coupling not in ("AC", "DC", "DCLimit"):
+            return True
+        self.__write_to_dev(f"TRIG:ANED:COUP {coupling}")
+        return False
+    
+    def trig_edge_filter(self, filter: Threeway) -> bool:
+        """Select filter mode for external signal
+        Args:
+            filter: LOW for lowpass filter, HIGH for highpass filter, OFF to disable filter
+        Returns:
+            True if filter mode is invalid
+        """
+        if filter not in (-1,0,1):
+            return True
+        args = ["RFR", "OFF", "LFR"]
+        self.__write_to_dev(f"TRIG:ANED:FILT {args[filter + 1]}")
+        return False
+    
+    def trig_edge_highpass(self, cutoff: int) -> bool:
+        """Frequencies below the cutoff frequency are rejected,
+        higher frequencies pass the filter
+        Args:
+            cutoff: 5 or 50 (unit: KHz)
+        Returns:
+            True if cutoff frequency is invalid
+        """
+        if cutoff not in (5,50):
+            return True
+        self.__write_to_dev(f"TRIG:ANED:CUT:HIGH KHZ{cutoff}")
+        return False
+
+    def trig_edge_lowpass(self, cutoff: int) -> bool:
+        """Frequencies higher than the cutoff frequency are rejected,
+        lower frequencies pass the filter
+        Args:
+            cutoff: 50 or 50000 (unit: KHz)
+        Returns:
+            True if cutoff frequency is invalid
+        """
+        if cutoff not in (50, 50000):
+            return True
+        unit = 'K' if cutoff == 50 else 'M'
+        self.__write_to_dev(f"TRIG:ANED:CUT:LOWP {unit}HZ50")
+        return False
+    
+    def trig_edge_noisereject(self, state: bool) -> None:
+        """Enable an automatic hysteresis on the trigger level to
+        avoid unwanted trigger events caused by noise.
+        Args:
+            state: True for noise rejection, False to disable
+        Returns:
+            None
+        """
+        self.__write_to_dev(f"TRIG:ANED:NREJ {int(state)}")
 
     def live_command_mode(self):
         print(">> LIVE COMMAND MODE")
