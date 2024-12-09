@@ -675,6 +675,34 @@ class DriverMXO4X:
         self.__write_to_dev("TRIG:MEV:AEV " + type)
         return False
     
+    def trig_level(self, level: float, channel: int = 1, event: int = 1) -> bool:
+        """Sets the trigger level for the specified event and source (channel).
+        If the trigger source is serial bus, the trigger level is set by the
+        thresholds in the protocol configuration.
+        Args:
+            level: -10 to 10 volts, value is clamped
+            channel: 1 to 4, index of analogue channel
+            event: 1 = A-trigger, 2 = B-trigger, 3 = reset event (for sequence trigger)
+        Returns:
+            True if channel or event is invalid
+        """
+        if channel not in (1,2,3,4) or event not in (1,2,3):
+            return True
+        level = self.__clamp(-10, level, 10)
+        self.__write_to_dev(f"TRIG:EVEN{event}:LEV{channel} {level:.3}")
+        return False
+    
+    def trig_find_level(self) -> None:
+        """Automatically sets trigger level to 0.5 * (MaxPeak - MinPeak).
+        In a trigger sequence, all events (A, B and R) are affected.
+        This function does not work for trigger sources Extern and Line.
+        Args:
+            N/A
+        Returns:
+            None
+        """
+        self.__write_to_dev("TRIG:FIND")
+    
     def trig_edge_direction(self, direction: Threeway, event: int = 1) -> bool:
         """Set edge direction for trigger
         Args:
