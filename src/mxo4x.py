@@ -1,16 +1,9 @@
-from argparse import ZERO_OR_MORE
-from fcntl import LOCK_WRITE
-from operator import ifloordiv
-from pickle import HIGHEST_PROTOCOL
-from token import LEFTSHIFT, RIGHTSHIFT
-
 import numpy as np
 from time import sleep
 import pyvisa
 import platform
 import sys
 from RsInstrument import RsInstrument
-from numpy.ma.core import argsort
 
 KHz = 1000
 MHz = 1000000
