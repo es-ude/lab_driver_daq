@@ -8,7 +8,9 @@ from RsInstrument import RsInstrument
 KHz = 1000
 MHz = 1000000
 
+# starting with Python 3.12, we may use these typedef-esque statements
 if sys.version_info[:2] >= (3,12):
+    # Threeway type is like a boolean, but with 3 states -1,0,1
     type Threeway = int
 else:
     Threeway = int
@@ -791,7 +793,57 @@ class DriverMXO4X:
             None
         """
         self.__write_to_dev(f"TRIG:ANED:NREJ {int(state)}")
-
+    
+    def trig_export_on_trigger(self, state: bool) -> None:
+        """Decide whether the waveform is saved to a file on a trigger event
+        Args:
+            state: True to export waveform data on trigger, False to do nothing
+        Returns:
+            None
+        """
+        self.__write_to_dev(f"TRIG:ACT:WFMS {"TRIG" if state else "NOAC"}")
+    
+    def export_scope(self, scope: str) -> bool:
+        """Defines the part of the waveform record that will be stored
+        Args:
+            scope: (case-insensitive)
+                "DISPLAY" - waveform data that is displayed in the diagram.
+                "ALL" - entire waveform, usually larger than what is displayed.
+                "CURSOR" - data between the cursor lines if a cursor measurement
+                    is defined for the source waveform.
+                "GATE" - data included in the measurement gate if a gated
+                    measurement is defined for the source waveform.
+                "MANUAL" - data between user-defined start and stop values.
+        Returns:
+            True if scope is invalid
+        """
+        if (scope := scope.upper()) not in ["DISPLAY", "ALL", "CURSOR", "GATE", "MANUAL"]:
+            return True
+        self.__write_to_dev(f"EXP:WAV:SCOP {scope}")
+        return False
+    
+    def export_manual_start(self, time) -> None:
+        """Set the start time value for waveform export in MANUAL mode
+        Args:
+            time: start time from -1e26 to +1e26 in seconds with 2 decimal precision
+                (value is clamped to fit range)
+        Returns:
+            None
+        """
+        time = self.__clamp(-1e26, time, 1e26)
+        self.__write_to_dev(f"EXP:WAV:STAR {time:.2}")
+    
+    def export_manual_stop(self, time) -> None:
+        """Set the end time value for waveform export in MANUAL mode
+        Args:
+            time: end time from -1e26 to +1e26 in seconds with 2 decimal precision
+                (value is clamped to fit range)
+        Returns:
+            None
+        """
+        time = self.__clamp(-1e26, time, 1e26)
+        self.__write_to_dev(f"EXP:WAV:STOP {time:.2}")
+    
     def live_command_mode(self):
         print(">> LIVE COMMAND MODE")
         print(">> Type 'exit' to stop.")
