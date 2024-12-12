@@ -844,19 +844,51 @@ class DriverMXO4X:
         time = self.__clamp(-1e26, time, 1e26)
         self.__write_to_dev(f"EXP:WAV:STOP {time:.2}")
     
-    def export_save(self):
+    def export_save(self) -> None:
+        """Save the waveform to the specified file
+        Args:
+            N/A
+        Returns:
+            None
+        """
         self.__write_to_dev("EXP:WAV:SAVE")
     
-    def export_abort(self):
+    def export_abort(self) -> None:
+        """Abort a running export started by export_save()
+        Args:
+            N/A
+        Returns:
+            None
+        """
         self.__write_to_dev("EXP:WAV:ABOR")
     
     def export_cursor_set(self, set: int) -> bool:
+        """If export scope was set to CURSOR, set the cursor set to be used
+        Args:
+            set: 1 or 2 for CURSOR1 or CURSOR2
+        Returns:
+            True if cursor set is not 1 or 2
+        """
         if set not in (1,2):
             return True
         self.__write_to_dev(f"EXP:WAV:CURS {set}")
         return False
     
-    def export_sources(self, *src: str):
+    def export_sources(self, *src: str) -> bool:
+        """Select all waveforms to be exported to the file
+        Args:
+            *src: One or more of the following waveforms
+                Analogue - "C1","C2","C3","C4".
+                Digital - "D0","D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15".
+                Math - "M1","M2","M3","M4","M5".
+                Reference - "R1","R2","R3","R4".
+                Spectrum - "SPECMAXH1","SPECMAXH2","SPECMAXH3","SPECMAXH4",
+                    "SPECMINH1","SPECMINH2","SPECMINH3","SPECMINH4",
+                    "SPECNORM1","SPECNORM2","SPECNORM3","SPECNORM4",
+                    "SPECAVER1","SPECAVER2","SPECAVER3","SPECAVER4".
+        Returns:
+            True if any of the waveforms are invalid, no changes are applied in that case
+        """
         src_analogue = [f"C{i}" for i in range(1,5)]
         src_digital = [f"D{i}" for i in range(16)]
         src_math = [f"M{i}" for i in range(1,6)]
@@ -873,13 +905,26 @@ class DriverMXO4X:
         return False
     
     def export_set_filename(self, filename: str) -> bool:
+        """Set the filename for waveform exports. Local storage is in /home/storage/userData
+        Args:
+            filename: Path and filename with extension .csv or .ref for single waveform exports
+                and .zip when multiple waveforms are selected
+        Returns:
+            True if filename doesn't end on .csv, .ref or .zip, no other checks are done!
+        """
         filename = filename.strip()
         if filename[-4:] not in (".csv", ".ref", ".zip"):
             return True
         self.__write_to_dev(f"EXP:WAV:NAME {filename}")
         return False
     
-    def export_get_filename(self):
+    def export_get_filename(self) -> str:
+        """Get the currently set filename for waveform exports
+        Args:
+            N/A
+        Returns:
+            Path and filename for waveform exports as a string
+        """
         return self.__read_from_dev("EXP:WAV:NAME?")
         
     
