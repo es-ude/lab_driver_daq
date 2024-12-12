@@ -1,4 +1,3 @@
-from fileinput import filename
 from time import sleep
 import pyvisa
 import platform
