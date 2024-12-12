@@ -1,4 +1,4 @@
-import numpy as np
+from fileinput import filename
 from time import sleep
 import pyvisa
 import platform
@@ -843,6 +843,45 @@ class DriverMXO4X:
         """
         time = self.__clamp(-1e26, time, 1e26)
         self.__write_to_dev(f"EXP:WAV:STOP {time:.2}")
+    
+    def export_save(self):
+        self.__write_to_dev("EXP:WAV:SAVE")
+    
+    def export_abort(self):
+        self.__write_to_dev("EXP:WAV:ABOR")
+    
+    def export_cursor_set(self, set: int) -> bool:
+        if set not in (1,2):
+            return True
+        self.__write_to_dev(f"EXP:WAV:CURS {set}")
+        return False
+    
+    def export_sources(self, *src: str):
+        src_analogue = [f"C{i}" for i in range(1,5)]
+        src_digital = [f"D{i}" for i in range(16)]
+        src_math = [f"M{i}" for i in range(1,6)]
+        src_reference = [f"R{i}" for i in range(1,5)]
+        src_specmax = [f"SPECMAXH{i}" for i in range(1,5)]
+        src_specmin = [f"SPECMINH{i}" for i in range(1,5)]
+        src_specnorm = [f"SPECNORM{i}" for i in range(1,5)]
+        src_specaver = [f"SPECAVER{i}" for i in range(1,5)]
+        src_spectrum = src_specmax + src_specmin + src_specnorm + src_specaver
+        src_all = src_analogue + src_digital + src_math + src_reference + src_spectrum
+        if any(x not in src_all for x in src):
+            return True
+        self.__write_to_dev(f"EXP:WAV:SOUR {','.join(src)}")
+        return False
+    
+    def export_set_filename(self, filename: str) -> bool:
+        filename = filename.strip()
+        if filename[-4:] not in (".csv", ".ref", ".zip"):
+            return True
+        self.__write_to_dev(f"EXP:WAV:NAME {filename}")
+        return False
+    
+    def export_get_filename(self):
+        return self.__read_from_dev("EXP:WAV:NAME?")
+        
     
     def live_command_mode(self):
         print(">> LIVE COMMAND MODE")
