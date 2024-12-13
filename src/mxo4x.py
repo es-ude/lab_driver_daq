@@ -58,6 +58,7 @@ class DriverMXO4X:
     _logic_group = 1    # which logic group to configure if none is explicitly stated
     _output_config = 1  # which screenshot output configuration to use if none is explicitly stated
     _trig_seq = False   # is trigger source sequence (else single)?
+    _cmd_stack = []     # all executed commands are stored here LIFO for debugging purposes 
 
     def __init__(self):
         pass
@@ -69,7 +70,13 @@ class DriverMXO4X:
         Returns:
             None
         """
-        self.SerialDevice.write(order)
+        try:
+            self.SerialDevice.write(order)
+        except Exception as e:
+            self._cmd_stack.append((order, f"FAILED - {e}"))
+            raise e
+        else:
+            self._cmd_stack.append(order)
 
     def __read_from_dev(self, order: str) -> str:
         """Wrapper for querying data from device
@@ -78,8 +85,24 @@ class DriverMXO4X:
         Returns:
             Queried data as a string
         """
-        text_out = self.SerialDevice.query(order)
+        try:
+            text_out = self.SerialDevice.query(order)
+        except Exception as e: 
+            self._cmd_stack.append((order, f"FAILED - {e} - {text_out}"))
+            raise e
+        else:
+            self._cmd_stack.append((order, text_out))
         return text_out
+    
+    def view_cmd_stack(self, entries: int = 0):
+        i = 1
+        for cmd in self._cmd_stack[-entries:][::-1]:
+            if type(cmd) == str:
+                print(f"{i:03}> {cmd}")
+            else:
+                cmd, out = cmd[0], cmd[1]
+                print(f"{i:03}> {cmd}\n     >> {out}")
+            i += 1
 
     def __init_dev(self, do_reset=True):
         """If the correct device is selected, initialise it and optionally do a reset
@@ -914,7 +937,7 @@ class DriverMXO4X:
         filename = filename.strip()
         if filename[-4:] not in (".csv", ".ref", ".zip"):
             return True
-        self.__write_to_dev(f"EXP:WAV:NAME {filename}")
+        self.__write_to_dev(f"EXP:WAV:NAME '{filename}'")
         return False
     
     def export_get_filename(self) -> str:
