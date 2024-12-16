@@ -4,6 +4,7 @@ import platform
 import sys
 from RsInstrument import RsInstrument
 
+mHz = .001
 KHz = 1000
 MHz = 1000000
 
@@ -948,6 +949,41 @@ class DriverMXO4X:
             Path and filename for waveform exports as a string
         """
         return self.__read_from_dev("EXP:WAV:NAME?")
+    
+    def fra_freq_start(self, freq: float) -> None:
+        freq = self.__clamp(.01, freq, 100*MHz)
+        self.__write_to_dev(f"FRAN:FREQ:STAR {freq:.2f}")
+    
+    def fra_freq_stop(self, freq: float) -> None:
+        freq = self.__clamp(.01, freq, 100*MHz)
+        self.__write_to_dev(f"FRAN:FREQ:STOP {freq:.2f}")
+    
+    def fra_run(self) -> None:
+        self.__write_to_dev("FRAN:STAT RUN")
+    
+    def fra_stop(self) -> None:
+        self.__write_to_dev("FRAN:STAT STOP")
+    
+    def fra_generator(self, channel: int) -> bool:
+        if channel not in (1,2):
+            return True
+        self.__write_to_dev(f"FRAN:GEN GEN{channel}")
+        return False
+    
+    def fra_input_channel(self, channel: int) -> bool:
+        if channel not in (1,2,3,4):
+            return True
+        self.__write_to_dev(f"FRAN:INP C{channel}")
+        return False
+    
+    def fra_output_channel(self, channel: int) -> bool:
+        if channel not in (1,2,3,4):
+            return True
+        self.__write_to_dev(f"FRAN:OUTP C{channel}")
+        return False
+    
+    def fra_repeat(self, state: bool) -> None:
+        self.__write_to_dev(f"FRAN:REP {int(state)}")
         
     
     def live_command_mode(self):
@@ -982,8 +1018,8 @@ if __name__ == "__main__":
     d.change_display_mode(True)
     d.change_remote_text("Hello World!")
 
-    d.gen_preset()
-    d.gen_enable()
+    #d.gen_preset()
+    #d.gen_enable()
     d.live_command_mode()
 
 
