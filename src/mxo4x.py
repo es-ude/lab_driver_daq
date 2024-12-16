@@ -924,6 +924,14 @@ class DriverMXO4X:
         src_all = src_analogue + src_digital + src_math + src_reference + src_spectrum
         if any(x not in src_all for x in src):
             return True
+        # TODO: it just won't change the name and idk why
+        export_filename = self.export_get_filename()[1:-1]    # get rid of ""
+        if len(src) > 1 and export_filename[-4:] != ".zip":
+            print("DEBUG1", export_filename)
+            self.export_set_filename(export_filename[:-4] + ".zip")
+        elif len(src) == 1 and export_filename[-4:] == ".zip":
+            print("DEBUG2", export_filename)
+            self.export_set_filename(export_filename[:-4] + ".ref")
         self.__write_to_dev(f"EXP:WAV:SOUR {','.join(src)}")
         return False
     
