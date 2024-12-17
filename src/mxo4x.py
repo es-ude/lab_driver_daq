@@ -897,6 +897,12 @@ class DriverMXO4X:
         self.__write_to_dev(f"EXP:WAV:CURS {set}")
         return False
     
+    """
+    NOTICE
+    Exporting multiple sources to a .zip file is not supported on firmware versions
+    older than 2.3.2.2! Our model is currently on firmware 1.4.2.2.
+    """
+    
     def export_sources(self, *src: str) -> bool:
         """Select all waveforms to be exported to the file
         Args:
@@ -924,7 +930,6 @@ class DriverMXO4X:
         src_all = src_analogue + src_digital + src_math + src_reference + src_spectrum
         if any(x not in src_all for x in src):
             return True
-        # TODO: it just won't change the name and idk why
         export_filename = self.export_get_filename()[1:-1]    # get rid of ""
         if len(src) > 1 and export_filename[-4:] != ".zip":
             print("DEBUG1", export_filename)
