@@ -905,7 +905,7 @@ class DriverMXO4X:
     
     def export_sources(self, *src: str) -> bool:
         """Select all waveforms to be exported to the file. Latest firmware (2.3.2.2) needed for multiple waveforms,
-        else only the first source is selected.
+        else only the first source is selected.                                                                                                                                                                  
         Args:
             *src: One or more of the following waveforms
                 Analogue - "C1","C2","C3","C4".
@@ -935,7 +935,12 @@ class DriverMXO4X:
         # THIS DOESN'T WORK WITHOUT A FIRMWARE UPDATE
         # Workaround: Just take the first source for now
         #self.__write_to_dev(f"EXP:WAV:SOUR {','.join(src)}")
-        self.__write_to_dev(f"EXP:WAV:SOUR {src[0]}")
+        try:
+            # If the source is not active, this will fail. Maybe try to find a way to
+            # query if a source is active?
+            self.__write_to_dev(f"EXP:WAV:SOUR {src[0]}")
+        except:
+            return True
         return False
     
     def export_set_filename(self, filename: str) -> bool:
