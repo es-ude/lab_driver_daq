@@ -904,7 +904,8 @@ class DriverMXO4X:
     """
     
     def export_sources(self, *src: str) -> bool:
-        """Select all waveforms to be exported to the file
+        """Select all waveforms to be exported to the file. Latest firmware (2.3.2.2) needed for multiple waveforms,
+        else only the first source is selected.
         Args:
             *src: One or more of the following waveforms
                 Analogue - "C1","C2","C3","C4".
@@ -931,25 +932,21 @@ class DriverMXO4X:
         if any(x not in src_all for x in src):
             return True
         export_filename = self.export_get_filename()[1:-1]    # get rid of ""
-        if len(src) > 1 and export_filename[-4:] != ".zip":
-            print("DEBUG1", export_filename)
-            self.export_set_filename(export_filename[:-4] + ".zip")
-        elif len(src) == 1 and export_filename[-4:] == ".zip":
-            print("DEBUG2", export_filename)
-            self.export_set_filename(export_filename[:-4] + ".ref")
-        self.__write_to_dev(f"EXP:WAV:SOUR {','.join(src)}")
+        # THIS DOESN'T WORK WITHOUT A FIRMWARE UPDATE
+        # Workaround: Just take the first source for now
+        #self.__write_to_dev(f"EXP:WAV:SOUR {','.join(src)}")
+        self.__write_to_dev(f"EXP:WAV:SOUR {src[0]}")
         return False
     
     def export_set_filename(self, filename: str) -> bool:
         """Set the filename for waveform exports. Local storage is in /home/storage/userData
         Args:
             filename: Path and filename with extension .csv or .ref for single waveform exports
-                and .zip when multiple waveforms are selected
         Returns:
-            True if filename doesn't end on .csv, .ref or .zip, no other checks are done!
+            True if filename doesn't end on .csv or .ref, no other checks are done!
         """
         filename = filename.strip()
-        if filename[-4:] not in (".csv", ".ref", ".zip"):
+        if filename[-4:] not in (".csv", ".ref"): #, ".zip"):
             return True
         self.__write_to_dev(f"EXP:WAV:NAME '{filename}'")
         return False
