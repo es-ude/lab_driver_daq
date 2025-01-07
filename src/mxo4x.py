@@ -59,7 +59,19 @@ class DriverMXO4X:
     _logic_group = 1    # which logic group to configure if none is explicitly stated
     _output_config = 1  # which screenshot output configuration to use if none is explicitly stated
     _trig_seq = False   # is trigger source sequence (else single)?
-    _cmd_stack = []     # all executed commands are stored here LIFO for debugging purposes 
+    _cmd_stack = []     # all executed commands are stored here LIFO for debugging purposes
+    src_analogue = [f"C{i}" for i in range(1,5)]
+    src_digital = [f"D{i}" for i in range(16)]
+    src_math = [f"M{i}" for i in range(1,6)]
+    src_reference = [f"R{i}" for i in range(1,5)]
+    src_specmax = [f"SPECMAXH{i}" for i in range(1,5)]
+    src_specmin = [f"SPECMINH{i}" for i in range(1,5)]
+    src_specnorm = [f"SPECNORM{i}" for i in range(1,5)]
+    src_specaver = [f"SPECAVER{i}" for i in range(1,5)]
+    src_spectrum = src_specmax + src_specmin + src_specnorm + src_specaver
+    src_all = src_analogue + src_digital + src_math + src_reference + src_spectrum
+    src_groups = [src_analogue, src_digital, src_math, src_reference,
+                  src_specmax, src_specmin, src_specnorm, src_specaver]
 
     def __init__(self):
         pass
@@ -826,6 +838,23 @@ class DriverMXO4X:
         """
         self.__write_to_dev(f"TRIG:ACT:WFMS {"TRIG" if state else "NOAC"}")
     
+    def is_source_active(self, source: str) -> bool:
+        # TODO: lists aren't hashable
+        if source not in self.src_all:
+            return False
+        src_group = list(filter(lambda xs: source in xs, self.src_groups))[0]
+        return bool(int(self.__read_from_dev({
+            self.src_analogue: "CHAN{}:STAT?",
+            self.src_digital: "DIG{}:STAT?",
+            self.src_math: "CALC:MATH{}:STAT?",
+            self.src_reference: "REFC{}:STAT?",
+            self.src_specnorm: "CALC:SPEC{}:STAT?",
+            self.src_specaver: "CALC:SPEC{}:STAT?",
+            self.src_specmin: "CALC:SPEC{}:STAT?",
+            self.src_specmax: "CALC:SPEC{}:STAT?",
+        }[src_group].format("".join(list(filter(str.isnumeric, source)))))))
+        
+    
     def export_scope(self, scope: str) -> bool:
         """Defines the part of the waveform record that will be stored
         Args:
@@ -919,17 +948,7 @@ class DriverMXO4X:
         Returns:
             True if any of the waveforms are invalid, no changes are applied in that case
         """
-        src_analogue = [f"C{i}" for i in range(1,5)]
-        src_digital = [f"D{i}" for i in range(16)]
-        src_math = [f"M{i}" for i in range(1,6)]
-        src_reference = [f"R{i}" for i in range(1,5)]
-        src_specmax = [f"SPECMAXH{i}" for i in range(1,5)]
-        src_specmin = [f"SPECMINH{i}" for i in range(1,5)]
-        src_specnorm = [f"SPECNORM{i}" for i in range(1,5)]
-        src_specaver = [f"SPECAVER{i}" for i in range(1,5)]
-        src_spectrum = src_specmax + src_specmin + src_specnorm + src_specaver
-        src_all = src_analogue + src_digital + src_math + src_reference + src_spectrum
-        if any(x not in src_all for x in src):
+        if any(x not in self.src_all for x in src):
             return True
         export_filename = self.export_get_filename()[1:-1]    # get rid of ""
         # THIS DOESN'T WORK WITHOUT A FIRMWARE UPDATE
