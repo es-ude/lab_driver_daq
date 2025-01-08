@@ -956,17 +956,11 @@ class DriverMXO4X:
         Returns:
             True if any of the waveforms are invalid, no changes are applied in that case
         """
-        if any(x not in self.src_all for x in src):
-            return True
-        export_filename = self.export_get_filename()[1:-1]    # get rid of ""
-        # THIS DOESN'T WORK WITHOUT A FIRMWARE UPDATE
-        # Workaround: Just take the first source for now
-        #self.__write_to_dev(f"EXP:WAV:SOUR {','.join(src)}")
-        try:
-            # If the source is not active, this will fail. Maybe try to find a way to
-            # query if a source is active?
+        if self._firmware_version >= "2.3.2.2" and all(self.is_source_active(x) for x in src):
+            self.__write_to_dev(f"EXP:WAV:SOUR {','.join(src)}")
+        elif self._firmware_version < "2.3.2.2" and self.is_source_active(src[0]):
             self.__write_to_dev(f"EXP:WAV:SOUR {src[0]}")
-        except:
+        else:
             return True
         return False
     
