@@ -158,6 +158,18 @@ class DriverMXO4X:
 
     def __clamp(self, x, y, z):
         return min(max(x, y), z)
+    
+    def __sync(self, timeout = 86400000) -> None:
+        """Wait until all queued commands have been processed
+        Args:
+            timeout: timeout in milliseconds, VISA exception thrown on timeout, default 1 day
+        Returns:
+            None
+        """
+        backup_timeout = self.SerialDevice.visa_timeout
+        self.SerialDevice.visa_timeout = timeout
+        self.__write_to_dev("*WAI")
+        self.SerialDevice.visa_timeout = backup_timeout
 
     def serial_open_known_target(self, resource_name: str, do_reset=False) -> None:
         """Open the serial connection to device
@@ -240,7 +252,7 @@ class DriverMXO4X:
             print("... not done due to wrong device")
         else:
             self.__write_to_dev("*RST")
-            sleep(2)
+            self.__sync()
 
     def change_display_mode(self, show_display: bool) -> None:
         """Decide whether display is shown during remote control
@@ -250,7 +262,7 @@ class DriverMXO4X:
             None
         """
         self.__write_to_dev(f"SYST:DISP:UPD {int(show_display)}")
-        sleep(2 if show_display else 1)
+        self.__sync()
 
     def change_remote_text(self, text: str) -> None:
         """Display an additional text in remote control
@@ -986,39 +998,55 @@ class DriverMXO4X:
         """
         return self.__read_from_dev("EXP:WAV:NAME?")
     
+    def fra_enter(self):
+        self.__write_to_dev("FRAN:ENAB ON")
+        self.__sync()
+    
+    def fra_exit(self):
+        self.__write_to_dev("FRAN:ENAB OFF")
+        self.__sync()
+    
     def fra_freq_start(self, freq: float) -> None:
+        self.fra_enter()
         freq = self.__clamp(.01, freq, 100*MHz)
         self.__write_to_dev(f"FRAN:FREQ:STAR {freq:.2f}")
     
     def fra_freq_stop(self, freq: float) -> None:
+        self.fra_enter()
         freq = self.__clamp(.01, freq, 100*MHz)
         self.__write_to_dev(f"FRAN:FREQ:STOP {freq:.2f}")
     
     def fra_run(self) -> None:
+        self.fra_enter()
         self.__write_to_dev("FRAN:STAT RUN")
     
     def fra_stop(self) -> None:
+        self.fra_enter()
         self.__write_to_dev("FRAN:STAT STOP")
     
     def fra_generator(self, channel: int) -> bool:
         if channel not in (1,2):
             return True
+        self.fra_enter()
         self.__write_to_dev(f"FRAN:GEN GEN{channel}")
         return False
     
     def fra_input_channel(self, channel: int) -> bool:
         if channel not in (1,2,3,4):
             return True
+        self.fra_enter()
         self.__write_to_dev(f"FRAN:INP C{channel}")
         return False
     
     def fra_output_channel(self, channel: int) -> bool:
         if channel not in (1,2,3,4):
             return True
+        self.fra_enter()
         self.__write_to_dev(f"FRAN:OUTP C{channel}")
         return False
     
     def fra_repeat(self, state: bool) -> None:
+        self.fra_enter()
         self.__write_to_dev(f"FRAN:REP {int(state)}")
         
     
@@ -1054,6 +1082,8 @@ if __name__ == "__main__":
     d.change_display_mode(True)
     d.change_remote_text("Hello World!")
 
-    d.live_command_mode()
+    d.fra_freq_start(1)
+    d.fra_run()
+    #d.live_command_mode()
 
     d.serial_close()
