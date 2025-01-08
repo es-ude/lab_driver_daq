@@ -60,18 +60,19 @@ class DriverMXO4X:
     _output_config = 1  # which screenshot output configuration to use if none is explicitly stated
     _trig_seq = False   # is trigger source sequence (else single)?
     _cmd_stack = []     # all executed commands are stored here LIFO for debugging purposes
-    src_analogue = [f"C{i}" for i in range(1,5)]
-    src_digital = [f"D{i}" for i in range(16)]
-    src_math = [f"M{i}" for i in range(1,6)]
-    src_reference = [f"R{i}" for i in range(1,5)]
-    src_specmax = [f"SPECMAXH{i}" for i in range(1,5)]
-    src_specmin = [f"SPECMINH{i}" for i in range(1,5)]
-    src_specnorm = [f"SPECNORM{i}" for i in range(1,5)]
-    src_specaver = [f"SPECAVER{i}" for i in range(1,5)]
+    _firmware_version: str
+    src_analogue = tuple(f"C{i}" for i in range(1,5))
+    src_digital = tuple(f"D{i}" for i in range(16))
+    src_math = tuple(f"M{i}" for i in range(1,6))
+    src_reference = tuple(f"R{i}" for i in range(1,5))
+    src_specmax = tuple(f"SPECMAXH{i}" for i in range(1,5))
+    src_specmin = tuple(f"SPECMINH{i}" for i in range(1,5))
+    src_specnorm = tuple(f"SPECNORM{i}" for i in range(1,5))
+    src_specaver = tuple(f"SPECAVER{i}" for i in range(1,5))
     src_spectrum = src_specmax + src_specmin + src_specnorm + src_specaver
     src_all = src_analogue + src_digital + src_math + src_reference + src_spectrum
-    src_groups = [src_analogue, src_digital, src_math, src_reference,
-                  src_specmax, src_specmin, src_specnorm, src_specaver]
+    src_groups = (src_analogue, src_digital, src_math, src_reference,
+                  src_specmax, src_specmin, src_specnorm, src_specaver)
 
     def __init__(self):
         pass
@@ -99,8 +100,9 @@ class DriverMXO4X:
             Queried data as a string
         """
         try:
+            text_out = ""   # default value needed, else variable may never be assigned!
             text_out = self.SerialDevice.query(order)
-        except Exception as e: 
+        except Exception as e:
             self._cmd_stack.append((order, f"FAILED - {e} - {text_out}"))
             raise e
         else:
@@ -139,6 +141,8 @@ class DriverMXO4X:
         """Checking the IDN"""
         id_back = self.get_id(False)
         self.SerialActive = self._device_name_chck in id_back
+        if self.SerialActive:
+            self._firmware_version = id_back.split(',')[-1]
 
     def __fix_gen_index(self, gen_index: int) -> int:
         if gen_index is None or gen_index not in (1,2):
@@ -839,10 +843,14 @@ class DriverMXO4X:
         self.__write_to_dev(f"TRIG:ACT:WFMS {"TRIG" if state else "NOAC"}")
     
     def is_source_active(self, source: str) -> bool:
-        # TODO: lists aren't hashable
         if source not in self.src_all:
             return False
-        src_group = list(filter(lambda xs: source in xs, self.src_groups))[0]
+        if self._firmware_version < "2.2.2.1" and source in self.src_spectrum and source[-1] > '1':
+            return False    # support for 4 spectrums only since 2.2.2.1
+        # determine which group the source belongs to, there can only be one, so index 0
+        src_group = tuple(list(filter(lambda xs: source in xs, self.src_groups))[0])
+        # get the correct command structure according to the source group, then
+        # insert the channel number taken from the source string into the {} placeholder
         return bool(int(self.__read_from_dev({
             self.src_analogue: "CHAN{}:STAT?",
             self.src_digital: "DIG{}:STAT?",
@@ -852,7 +860,7 @@ class DriverMXO4X:
             self.src_specaver: "CALC:SPEC{}:STAT?",
             self.src_specmin: "CALC:SPEC{}:STAT?",
             self.src_specmax: "CALC:SPEC{}:STAT?",
-        }[src_group].format("".join(list(filter(str.isnumeric, source)))))))
+        }[src_group].format("".join(filter(str.isnumeric, source))))))
         
     
     def export_scope(self, scope: str) -> bool:
@@ -1052,9 +1060,6 @@ if __name__ == "__main__":
     d.change_display_mode(True)
     d.change_remote_text("Hello World!")
 
-    #d.gen_preset()
-    #d.gen_enable()
     d.live_command_mode()
-
 
     d.serial_close()
