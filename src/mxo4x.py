@@ -221,8 +221,6 @@ class DriverMXO4X:
 
     def serial_close(self) -> None:
         """Close the serial connection
-        Args:
-            N/A
         Returns:
             None
         """
@@ -243,8 +241,6 @@ class DriverMXO4X:
 
     def do_reset(self) -> None:
         """Reset the device, then wait two seconds
-        Args:
-            N/A
         Returns:
             None
         """
@@ -288,8 +284,6 @@ class DriverMXO4X:
 
     def gen_get_default_index(self) -> int:
         """Get which generator is currently set as the default
-        Args:
-            N/A
         Returns:
             Default generator's index: 1 or 2
         """
@@ -413,8 +407,6 @@ class DriverMXO4X:
 
     def dig_get_default_logic_group(self) -> int:
         """Get the currently set default logic group
-        Args:
-            N/A
         Returns:
             Logic group from 1 to 4
         """
@@ -570,30 +562,63 @@ class DriverMXO4X:
         return output_config if output_config in (1,2) else self._output_config
 
     def sshot_get_default_config(self):
+        """Get the number of the default screenshot output configuration
+        Returns:
+            Output configuration number
+        """
         return self._output_config
 
     def sshot_set_default_config(self, output_config: int) -> bool:
+        """Set which screenshot output configuration is used per default
+        Args:
+            output_config: 1 or 2
+        Returns:
+            True if output config is invalid
+        """
         if output_config in (1, 2):
             self._output_config = output_config
             return False
         return True
 
     def sshot_get_filename(self) -> str:
+        """A string of the path and filename of screenshots
+        Returns:
+            Path string
+        """
         return self.__read_from_dev("MMEM:NAME?")
 
     def sshot_set_filename(self, filename: str) -> None:
+        """Set filename and path of screenshots
+        Args:
+            filename: Path string
+        Returns:
+            None
+        """
         self.__write_to_dev(f"MMEM:NAME {filename}")
 
-    def sshot_destination(self, dest: str) -> bool:
+    def sshot_destination(self, dest: str, output_config: int = None) -> bool:
+        """Select whether to save screenshot in a file or clipboard
+        Args:
+            dest: "FILE" or "CLIPBOARD" (case-insensitive)
+        Returns:
+            True if destination is invalid
+        """
+        output_config = self.__fix_output_config(output_config)
         if dest.upper() == "FILE":
-            self.__write_to_dev(f"MMEM:DEST MMEM")
+            self.__write_to_dev(f"HCOP:DEST{output_config} MMEM")
         elif dest.upper() == "CLIPBOARD":
-            self.__write_to_dev(f"MMEM:DEST CLIPBOARD")
+            self.__write_to_dev(f"HCOP:DEST{output_config} CLIPBOARD")
         else:
             return True
         return False
 
     def sshot_file_format(self, format: str, output_config: int = None) -> bool:
+        """Screenshot file format when saving to a file
+        Args:
+            format: "JPG" or "PNG" (case-insensitive)
+        Returns:
+            True if format is invalid
+        """
         output_config = self.__fix_output_config(output_config)
         if format.upper() not in ("PNG", "JPG"):
             return True
@@ -601,30 +626,66 @@ class DriverMXO4X:
         return False
 
     def sshot_invert_colours(self, state: bool, output_config: int = None) -> None:
+        """Invert all colours of the screenshot
+        Args:
+            state: True to invert colours, False to leave it unchanged
+        Returns:
+            None
+        """
         output_config = self.__fix_output_config(output_config)
         self.__write_to_dev(f"HCOP:DEV{output_config}:INV {int(state)}")
 
     def sshot_white_background(self, state: bool, output_config: int = None) -> None:
+        """Invert only the background colour so it appears white in a screenshot
+        Args:
+            state: True for white background, False for black
+        Returns:
+            None
+        """
         output_config = self.__fix_output_config(output_config)
         self.__write_to_dev(f"HCOP:DEV{output_config}:WBKG {int(state)}")
 
     def sshot_include_signal_bar(self, state: bool, output_config: int = None) -> None:
+        """Include the signal bar below the diagram area in a screenshot
+        Args:
+            state: True to include signal bar, False to hide it
+        Returns:
+            None
+        """
         output_config = self.__fix_output_config(output_config)
         self.__write_to_dev(f"HCOP:DEV{output_config}:ISBA {int(state)}")
 
     def sshot_include_dialog_box(self, state: bool, output_config: int = None) -> None:
+        """Include any open dialog box in a screenshot
+        Args:
+            state: True to include dialog boxes on screenshots, False to hide them 
+        Returns:
+            None
+        """
         output_config = self.__fix_output_config(output_config)
         self.__write_to_dev(f"HCOP:DEV{output_config}:SSD {int(state)}")
 
     def sshot_capture_now(self, output_config: int = None) -> None:
+        """Start immediate output of the display image to a screenshot, the display is automatically
+        enabled if it's currently showing a static image
+        Returns:
+            None
+        """
         if int(self.__read_from_dev("SYST:DISP:UPD?")) == 0:
             self.change_display_mode(True)
+            self.__sync()
         output_config = self.__fix_output_config(output_config)
         self.__write_to_dev(f"HCOP:IMM{output_config}")
 
     def sshot_capture_next(self, output_config: int = None) -> None:
+        """Start output of the next display image to a screenshot, the display is automatically
+        enabled if it's currently showing a static image
+        Returns:
+            None
+        """
         if int(self.__read_from_dev("SYST:DISP:UPD?")) == 0:
             self.change_display_mode(True)
+            self.__sync()
         output_config = self.__fix_output_config(output_config)
         self.__write_to_dev(f"HCOP:IMM{output_config}:NEXT")
 
@@ -742,8 +803,6 @@ class DriverMXO4X:
         """Automatically sets trigger level to 0.5 * (MaxPeak - MinPeak).
         In a trigger sequence, all events (A, B and R) are affected.
         This function does not work for trigger sources Extern and Line.
-        Args:
-            N/A
         Returns:
             None
         """
@@ -918,8 +977,6 @@ class DriverMXO4X:
     
     def export_save(self) -> None:
         """Save the waveform to the specified file
-        Args:
-            N/A
         Returns:
             None
         """
@@ -927,8 +984,6 @@ class DriverMXO4X:
     
     def export_abort(self) -> None:
         """Abort a running export started by export_save()
-        Args:
-            N/A
         Returns:
             None
         """
@@ -991,40 +1046,72 @@ class DriverMXO4X:
     
     def export_get_filename(self) -> str:
         """Get the currently set filename for waveform exports
-        Args:
-            N/A
         Returns:
             Path and filename for waveform exports as a string
         """
         return self.__read_from_dev("EXP:WAV:NAME?")
     
-    def fra_enter(self):
+    def fra_enter(self) -> None:
+        """Enter frequency response analysis mode. This is done automatically whenever an FRA function is called.
+        Returns:
+            None
+        """
         self.__write_to_dev("FRAN:ENAB ON")
         self.__sync()
     
     def fra_exit(self):
+        """Exit frequency response analysis mode
+        Returns:
+            None
+        """
         self.__write_to_dev("FRAN:ENAB OFF")
         self.__sync()
     
     def fra_freq_start(self, freq: float) -> None:
+        """Set the start frequency of the sweep
+        Args:
+            freq: Frequency in Hz from 10 mHz to 100 MHz (value will be clamped)
+        Returns:
+            None
+        """
         self.fra_enter()
-        freq = self.__clamp(.01, freq, 100*MHz)
+        freq = self.__clamp(10*mHz, freq, 100*MHz)
         self.__write_to_dev(f"FRAN:FREQ:STAR {freq:.2f}")
     
     def fra_freq_stop(self, freq: float) -> None:
+        """Set the stop frequency of the sweep
+        Args:
+            freq: Frequency in Hz from 10 mHz to 100 MHz (value will be clamped)
+        Returns:
+            None
+        """
         self.fra_enter()
-        freq = self.__clamp(.01, freq, 100*MHz)
+        freq = self.__clamp(10*mHz, freq, 100*MHz)
         self.__write_to_dev(f"FRAN:FREQ:STOP {freq:.2f}")
     
     def fra_run(self) -> None:
+        """Run the frequency response analysis
+        Returns:
+            None
+        """
         self.fra_enter()
         self.__write_to_dev("FRAN:STAT RUN")
     
     def fra_stop(self) -> None:
+        """Stop the frequency response analysis
+        Returns:
+            None
+        """
         self.fra_enter()
         self.__write_to_dev("FRAN:STAT STOP")
     
     def fra_generator(self, channel: int) -> bool:
+        """Select built-in generator for a frequency sweep
+        Args:
+            channel: 1 or 2
+        Returns:
+            True for invalid channel number
+        """
         if channel not in (1,2):
             return True
         self.fra_enter()
@@ -1032,6 +1119,12 @@ class DriverMXO4X:
         return False
     
     def fra_input_channel(self, channel: int) -> bool:
+        """Set the channel used for the input signal of the device
+        Args:
+            channel: 1 to 4
+        Returns:
+            True for invalid channel number
+        """
         if channel not in (1,2,3,4):
             return True
         self.fra_enter()
@@ -1039,6 +1132,12 @@ class DriverMXO4X:
         return False
     
     def fra_output_channel(self, channel: int) -> bool:
+        """Set the channel used for the output signal of the device
+        Args:
+            channel: 1 to 4
+        Returns:
+            True for invalid channel number
+        """
         if channel not in (1,2,3,4):
             return True
         self.fra_enter()
@@ -1046,6 +1145,12 @@ class DriverMXO4X:
         return False
     
     def fra_repeat(self, state: bool) -> None:
+        """Whether to repeat the measurement using the same parameters
+        Args:
+            state: True to repeat
+        Returns:
+            None
+        """
         self.fra_enter()
         self.__write_to_dev(f"FRAN:REP {int(state)}")
         
