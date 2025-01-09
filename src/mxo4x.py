@@ -532,18 +532,39 @@ class DriverMXO4X:
         return False
 
     def dig_hysteresis_coupling(self, state: bool, logic_group: int = None) -> None:
+        """Set the threshold and hysteresis for all digital channels and all buses to the same value
+        Args:
+            state: True to couple all levels
+        Returns:
+            None
+        """
         logic_group = self.__fix_logic_index(logic_group)
         self.__write_to_dev(f"PBUS{logic_group}:THC {int(state)}")
 
     def dig_show_bus(self, logic_group: int = None) -> None:
+        """Show the bus signal and values in the diagram
+        Returns:
+            None
+        """
         logic_group = self.__fix_logic_index(logic_group)
         self.__write_to_dev(f"PBUS{logic_group}:DISP:SHBU ON")
 
     def dig_hide_bus(self, logic_group: int = None) -> None:
+        """Hide the bus signal and values in the diagram
+        Returns:
+            None
+        """
         logic_group = self.__fix_logic_index(logic_group)
         self.__write_to_dev(f"PBUS{logic_group}:DISP:SHBU OFF")
 
     def dig_bus_data_format(self, format: str, logic_group: int = None) -> bool:
+        """Set the data format for bus values, which are displayed in the decode table and the comb
+        bus display
+        Args:
+            format: "HEX", "OCT", "BIN", "ASCII", "SIGNED" or "UNSIGNED" (case-insensitive)
+        Returns:
+            True if data format is invalid
+        """
         if (format := format.upper()) not in ("HEX", "OCT", "BIN", "ASCII", "SIGNED", "UNSIGNED"):
             return True
         if format == "SIGNED":
@@ -554,7 +575,14 @@ class DriverMXO4X:
         self.__write_to_dev(f"PBUS{logic_group}:DATA:FORM {format}")
         return False
 
-    def dig_bus_header(self, logic_group: int = None) -> None:
+    def dig_bus_header(self, logic_group: int = None) -> str:
+        """Get the header data of the indicated bus
+        Returns:
+            In order - XStart, acquisition time before trigger, in s;
+                XStop, acquisition time after trigger, in s;
+                Record length of the waveform in Samples;
+                Number of values per sample interval. For digital data, the result is 1.
+        """
         logic_group = self.__fix_logic_index(logic_group)
         return self.__read_from_dev(f"PBUS{logic_group}:DATA:HEAD?")
 
