@@ -159,7 +159,7 @@ class DriverMXO4X:
     def __clamp(self, x, y, z):
         return min(max(x, y), z)
     
-    def __sync(self, timeout = 86400000) -> None:
+    def sync(self, timeout = 86400000) -> None:
         """Wait until all queued commands have been processed
         Args:
             timeout: timeout in milliseconds, VISA exception thrown on timeout, default 1 day
@@ -248,7 +248,7 @@ class DriverMXO4X:
             print("... not done due to wrong device")
         else:
             self.__write_to_dev("*RST")
-            self.__sync()
+            self.sync()
 
     def change_display_mode(self, show_display: bool) -> None:
         """Decide whether display is shown during remote control
@@ -258,7 +258,7 @@ class DriverMXO4X:
             None
         """
         self.__write_to_dev(f"SYST:DISP:UPD {int(show_display)}")
-        self.__sync()
+        self.sync()
 
     def change_remote_text(self, text: str) -> None:
         """Display an additional text in remote control
@@ -581,7 +581,7 @@ class DriverMXO4X:
             In order - XStart, acquisition time before trigger, in s;
                 XStop, acquisition time after trigger, in s;
                 Record length of the waveform in Samples;
-                Number of values per sample interval. For digital data, the result is 1.
+                Number of values per sample interval, which is 1 for digital data.
         """
         logic_group = self.__fix_logic_index(logic_group)
         return self.__read_from_dev(f"PBUS{logic_group}:DATA:HEAD?")
@@ -701,7 +701,7 @@ class DriverMXO4X:
         """
         if int(self.__read_from_dev("SYST:DISP:UPD?")) == 0:
             self.change_display_mode(True)
-            self.__sync()
+            self.sync()
         output_config = self.__fix_output_config(output_config)
         self.__write_to_dev(f"HCOP:IMM{output_config}")
 
@@ -713,7 +713,7 @@ class DriverMXO4X:
         """
         if int(self.__read_from_dev("SYST:DISP:UPD?")) == 0:
             self.change_display_mode(True)
-            self.__sync()
+            self.sync()
         output_config = self.__fix_output_config(output_config)
         self.__write_to_dev(f"HCOP:IMM{output_config}:NEXT")
 
@@ -1085,7 +1085,7 @@ class DriverMXO4X:
             None
         """
         self.__write_to_dev("FRAN:ENAB ON")
-        self.__sync()
+        self.sync()
     
     def fra_exit(self):
         """Exit frequency response analysis mode
@@ -1093,7 +1093,7 @@ class DriverMXO4X:
             None
         """
         self.__write_to_dev("FRAN:ENAB OFF")
-        self.__sync()
+        self.sync()
     
     def fra_freq_start(self, freq: float) -> None:
         """Set the start frequency of the sweep
@@ -1215,8 +1215,9 @@ if __name__ == "__main__":
     d.change_display_mode(True)
     d.change_remote_text("Hello World!")
 
-    d.fra_freq_start(1)
+    d.fra_freq_start(100)
     d.fra_run()
+    d.sync()
     #d.live_command_mode()
 
     d.serial_close()
