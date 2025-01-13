@@ -1146,6 +1146,10 @@ class DriverMXO4X:
         self.__write_to_dev(f"FRAN:GEN GEN{channel}")
         return False
     
+    def fra_generator_amplitude(self, amplitude: float) -> None:
+        self.__clamp(.01, amplitude, 12)
+        self.__write_to_dev(f"FRAN:GEN:AMPL {amplitude:.2f}")
+                                                                                        
     def fra_input_channel(self, channel: int) -> bool:
         """Set the channel used for the input signal of the device
         Args:
@@ -1181,6 +1185,24 @@ class DriverMXO4X:
         """
         self.fra_enter()
         self.__write_to_dev(f"FRAN:REP {int(state)}")
+    
+    def fra_reset(self) -> None:
+        """Reset the frequency response analysis
+        Returns:
+            None
+        """
+        self.fra_enter()
+        self.__write_to_dev("FRAN:RES")
+    
+    def fra_autoscale(self, state: bool) -> None:
+        """Enable or disable the autoscaling function for each measurement
+        Args:
+            state: True to enable autoscaling, False to disable
+        Returns:
+            None
+        """
+        self.fra_enter()
+        self.__write_to_dev(f"FRAN:AUT {int(state)}")
         
     
     def live_command_mode(self):
@@ -1215,9 +1237,10 @@ if __name__ == "__main__":
     d.change_display_mode(True)
     d.change_remote_text("Hello World!")
 
-    d.fra_freq_start(100)
-    d.fra_run()
+    #d.fra_freq_start(100)
+    #d.fra_run()
+    d.fra_enter()
     d.sync()
-    #d.live_command_mode()
+    d.live_command_mode()
 
     d.serial_close()
