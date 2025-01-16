@@ -1203,6 +1203,17 @@ class DriverMXO4X:
         """
         self.fra_enter()
         self.__write_to_dev(f"FRAN:AUT {int(state)}")
+    
+    def fra_with_offset(self, offset: float = 0.0, wait_time: float = 1.) -> None:
+        # GEN1 is Signalgeber
+        # GEN2 is offset
+        self.fra_generator(1)
+        self.gen_set_default_index(2)
+        self.gen_enable()
+        self.gen_function("DC")
+        self.gen_offset(offset)
+        sleep(wait_time)
+        self.fra_run()
         
     
     def live_command_mode(self):
@@ -1239,8 +1250,7 @@ if __name__ == "__main__":
 
     #d.fra_freq_start(100)
     #d.fra_run()
-    d.fra_enter()
-    d.sync()
+    d.fra_with_offset()
     d.live_command_mode()
 
     d.serial_close()
