@@ -1,4 +1,4 @@
-from time import sleep
+from time import sleep, strftime
 import pyvisa
 
 
@@ -44,6 +44,7 @@ class DriverNGUX01:
             if do_reset:
                 self.do_reset()
             self.__write_to_dev("SYST:MIX")
+            self.__write_to_dev(strftime("SYST:TIME %H,%M,%S"))
             print(f"Right device is selected with: {self.get_id(False)}")
         else:
             print("Not right selected device. Please check!")
@@ -361,6 +362,12 @@ class DriverNGUX01:
             None
         """
         self.__write_to_dev("FLOG 0")
+    
+    def test(self, cmd):
+        if '?' in cmd:
+            return self.__read_from_dev(cmd)
+        else:
+            self.__write_to_dev(cmd)
 
 
 if __name__ == "__main__":
@@ -368,10 +375,7 @@ if __name__ == "__main__":
 
     dev = DriverNGUX01()
     dev.serial_start()
-    print(dev.get_fastlog_triggered())
-    dev.set_fastlog_triggered(True)
-    print(dev.get_fastlog_triggered())
-    dev.set_fastlog_triggered(False)
-    print(dev.get_fastlog_triggered())
+    status = dev.test("*ESR?")
+    print(status) 
     dev.serial_close()
 
