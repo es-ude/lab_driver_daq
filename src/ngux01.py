@@ -1,3 +1,4 @@
+import time
 from time import sleep, strftime
 import pyvisa
 
@@ -27,6 +28,8 @@ class DriverNGUX01:
     _volt_range = [-20.0, 20.0]
     _curr_range = [-0.1, 0.1]
     _device_name_chck = "NGU"
+    _last_usb_state: bool   # True = connected, False = disconnected
+    _fastlog_finish_timestamp: int = 0
 
     def __init__(self):
         pass
@@ -45,7 +48,9 @@ class DriverNGUX01:
                 self.do_reset()
             self.__write_to_dev("SYST:MIX")
             self.__write_to_dev(strftime("SYST:TIME %H,%M,%S"))
+            self._last_usb_state = self.is_usb_connected()
             print(f"Right device is selected with: {self.get_id(False)}")
+            self.sync()
         else:
             print("Not right selected device. Please check!")
 
@@ -59,6 +64,18 @@ class DriverNGUX01:
 
     def __float_eq(self, x, y, epsilon=0.00000001):
         return abs(x - y) < epsilon
+
+    def sync(self, timeout = 86400000) -> None:
+        """Wait until all queued commands have been processed
+        Args:
+            timeout: timeout in milliseconds, VISA exception thrown on timeout, default 1 day
+        Returns:
+            None
+        """
+        backup_timeout = self.SerialDevice.timeout
+        self.SerialDevice.timeout = timeout
+        self.__write_to_dev("*WAI")
+        self.SerialDevice.timeout = backup_timeout
 
     def serial_open_known_target(self, resource_name: str, do_reset=False) -> None:
         """Open the serial connection to device"""
@@ -208,7 +225,7 @@ class DriverNGUX01:
         Returns:
             None
         """
-        self.__write_to_dev(f"FLOG:FILE:DUR {duration}")
+        self.__write_to_dev(f"FLOG:STIM {duration}")
 
     def get_fastlog_duration(self) -> int:
         """Get duration of a FastLog sample
@@ -339,7 +356,7 @@ class DriverNGUX01:
                 print(f"... meas. energy: {1e3 * val:.6f} mWh")
             return val
 
-    def do_fastlog(self, sample_rate:float=None, duration:int=None) -> bool:
+    def do_fastlog(self, sample_rate: float = None, duration: int = None) -> bool:
         """Start a FastLog measurement
         Args:
             sample_rate: Optional; set a sample rate before measuring
@@ -352,6 +369,7 @@ class DriverNGUX01:
         if duration is not None:
             self.set_fastlog_duration(duration)
         self.__write_to_dev("FLOG 1")
+        self._fastlog_finish_timestamp = time.time_ns() + self.get_fastlog_duration() * 10**9
         return False
 
     def abort_fastlog(self) -> None:
@@ -362,7 +380,29 @@ class DriverNGUX01:
             None
         """
         self.__write_to_dev("FLOG 0")
+        self._fastlog_finish_timestamp = time.time_ns()
     
+    def is_usb_connected(self) -> bool:
+        return "USB" in dev.test("FLOG:FILE:TPAR?")
+    
+    def is_usb_disconnected(self):
+        return not self.is_usb_connected()
+    
+    def has_usb_switched_state(self):
+        now_state = self.is_usb_connected()
+        ret = now_state != self._last_usb_state
+        self._last_usb_state = now_state
+        return ret
+    
+    def is_fastlog_running(self):
+        print(time.time_ns(), self._fastlog_finish_timestamp)
+        return time.time_ns() <= self._fastlog_finish_timestamp
+    
+    def event_handler(self, event, action, *args, **kwargs) -> None:
+        while not event():
+            sleep(0.1)
+        action(*args, **kwargs)
+        
     def test(self, cmd):
         if '?' in cmd:
             return self.__read_from_dev(cmd)
@@ -375,7 +415,9 @@ if __name__ == "__main__":
 
     dev = DriverNGUX01()
     dev.serial_start()
-    status = dev.test("*ESR?")
-    print(status) 
+    dev.set_fastlog_sample_rate(.1)
+    dev.set_fastlog_duration(3)
+    dev.event_handler(dev.is_usb_connected, dev.do_fastlog)
+    dev.event_handler(lambda: not dev.is_fastlog_running(), lambda: None)
     dev.serial_close()
 
