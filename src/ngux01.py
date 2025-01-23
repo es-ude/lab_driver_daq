@@ -225,7 +225,7 @@ class DriverNGUX01:
         Returns:
             None
         """
-        self.__write_to_dev(f"FLOG:STIM {duration}")
+        self.__write_to_dev(f"FLOG:FILE:DUR {duration}")
 
     def get_fastlog_duration(self) -> int:
         """Get duration of a FastLog sample
@@ -234,7 +234,7 @@ class DriverNGUX01:
         Returns:
             Duration in seconds
         """
-        return float(self.__read_from_dev("FLOG:STIM?"))
+        return float(self.__read_from_dev("FLOG:FILE:DUR?"))
 
     def set_fastlog_triggered(self, triggered: bool) -> None:
         self.__write_to_dev(f"FLOG:TRIG {int(triggered)}")
@@ -356,14 +356,16 @@ class DriverNGUX01:
                 print(f"... meas. energy: {1e3 * val:.6f} mWh")
             return val
 
-    def do_fastlog(self, sample_rate: float = None, duration: int = None) -> bool:
+    def do_fastlog(self, duration: int = None, sample_rate: float = None) -> bool:
         """Start a FastLog measurement
         Args:
-            sample_rate: Optional; set a sample rate before measuring
             duration: Optional; set the duration of the measurement
+            sample_rate: Optional; set a sample rate before measuring
         Returns:
-            True when arguments are invalid
+            True when arguments are invalid or USB device not detected
         """
+        if self.is_usb_disconnected():
+            return True
         if sample_rate is not None and self.set_fastlog_sample_rate(sample_rate):
             return True
         if duration is not None:
@@ -395,13 +397,15 @@ class DriverNGUX01:
         return ret
     
     def is_fastlog_running(self):
-        print(time.time_ns(), self._fastlog_finish_timestamp)
         return time.time_ns() <= self._fastlog_finish_timestamp
+    
+    def is_fastlog_finished(self):
+        return not self.is_fastlog_running()
     
     def event_handler(self, event, action, *args, **kwargs) -> None:
         while not event():
             sleep(0.1)
-        action(*args, **kwargs)
+        return action(*args, **kwargs)
         
     def test(self, cmd):
         if '?' in cmd:
@@ -417,7 +421,9 @@ if __name__ == "__main__":
     dev.serial_start()
     dev.set_fastlog_sample_rate(.1)
     dev.set_fastlog_duration(3)
+    print("Searching for USB devices...")
     dev.event_handler(dev.is_usb_connected, dev.do_fastlog)
-    dev.event_handler(lambda: not dev.is_fastlog_running(), lambda: None)
+    print("Found USB device. Running FastLog measurement...")
+    dev.event_handler(dev.is_fastlog_finished, lambda: print("Done!"))
     dev.serial_close()
 
