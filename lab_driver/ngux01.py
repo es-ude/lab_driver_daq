@@ -385,24 +385,55 @@ class DriverNGUX01:
         self._fastlog_finish_timestamp = time.time_ns()
     
     def is_usb_connected(self) -> bool:
+        """EVENT - Check for USB device connection
+        Returns:
+            True if USB device is detected, False otherwise
+        """
         return "USB" in dev.test("FLOG:FILE:TPAR?")
     
-    def is_usb_disconnected(self):
+    def is_usb_disconnected(self) -> bool:
+        """EVENT - Convenience function for negation of is_usb_connected, to avoid lambda expression
+        Returns:
+            True if no USB device is detected, False otherwise
+        """
         return not self.is_usb_connected()
     
-    def has_usb_switched_state(self):
+    def has_usb_switched_state(self) -> bool:
+        """EVENT - Check if USB device has been (dis-)connected since the last call of this function
+        or since serial connection has been established if called for the first time
+        Returns:
+            True if USB device has been disconnected when it was connected before or vice versa
+        """
         now_state = self.is_usb_connected()
         ret = now_state != self._last_usb_state
         self._last_usb_state = now_state
         return ret
     
-    def is_fastlog_running(self):
-        return time.time_ns() <= self._fastlog_finish_timestamp
+    def is_fastlog_running(self) -> bool:
+        """EVENT - Check if FastLog measurement is currently running
+        Returns:
+            True if FastLog measurement is running, False otherwise
+        """
+        return time.time_ns() <= self._fastlog_finish_timestamp and self.is_usb_connected()
     
-    def is_fastlog_finished(self):
+    def is_fastlog_finished(self) -> bool:
+        """EVENT - Convenience function for negation of is_fastlog_running, to avoid lambda expression
+        Returns:
+            True if FastLog measurement has finished or is not running, False otherwise
+        """
         return not self.is_fastlog_running()
     
-    def event_handler(self, event, action, *args, **kwargs) -> None:
+    def event_handler(self, event, action, *args, **kwargs):
+        """Listen for events and execute an action when triggered. The desired event is
+        polled for every 100 ms, sleeping in-between, hence this is a blocking function.
+        Args:
+            event: Some event listener function
+            action: Any action to be executed
+            *args: Positional arguments passed to action
+            **kwargs: Keyword arguments passed to action
+        Returns:
+            Whatever the action returns
+        """
         while not event():
             sleep(0.1)
         return action(*args, **kwargs)
