@@ -17,7 +17,7 @@ uv sync
 ## Using the package release in other Repos
 ### MXO44 how-to on Linux:
 1. Start RsVisa Tester
-2. Click on Find Resource once after a reboot
+2. Click on Find Resource once after connecting via USB
 3. Done
 
 ### DMM6500 how-to on Linux:

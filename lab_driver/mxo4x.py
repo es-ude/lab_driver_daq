@@ -1,4 +1,4 @@
-from time import sleep
+from time import sleep, strftime
 import pyvisa
 import platform
 import sys
@@ -134,6 +134,7 @@ class DriverMXO4X:
             # that's why it worked there, but not on Linux
             # self.__write_to_dev("SYST:MIX")   # Instrument error detected: -113,"Undefined header;SYST:MIX"
             print(f"Right device is selected with: {self.get_id(False)}")
+            self.__write_to_dev(strftime("SYST:TIME %H,%M,%S"))
         else:
             print("Not right selected device. Please check!")
 
@@ -824,7 +825,7 @@ class DriverMXO4X:
         if channel not in (1,2,3,4) or event not in (1,2,3):
             return True
         level = self.__clamp(-10, level, 10)
-        self.__write_to_dev(f"TRIG:EVEN{event}:LEV{channel} {level:.3}")
+        self.__write_to_dev(f"TRIG:EVEN{event}:LEV{channel} {level:.3f}")
         return False
     
     def trig_find_level(self) -> None:
@@ -981,7 +982,7 @@ class DriverMXO4X:
         self.__write_to_dev(f"EXP:WAV:SCOP {scope}")
         return False
     
-    def export_manual_start(self, time) -> None:
+    def export_manual_start(self, time: float) -> None:
         """Set the start time value for waveform export in MANUAL mode
         Args:
             time: start time from -1e26 to +1e26 in seconds with 2 decimal precision
@@ -990,9 +991,9 @@ class DriverMXO4X:
             None
         """
         time = self.__clamp(-1e26, time, 1e26)
-        self.__write_to_dev(f"EXP:WAV:STAR {time:.2}")
+        self.__write_to_dev(f"EXP:WAV:STAR {time:.2f}")
     
-    def export_manual_stop(self, time) -> None:
+    def export_manual_stop(self, time: float) -> None:
         """Set the end time value for waveform export in MANUAL mode
         Args:
             time: end time from -1e26 to +1e26 in seconds with 2 decimal precision
@@ -1001,7 +1002,7 @@ class DriverMXO4X:
             None
         """
         time = self.__clamp(-1e26, time, 1e26)
-        self.__write_to_dev(f"EXP:WAV:STOP {time:.2}")
+        self.__write_to_dev(f"EXP:WAV:STOP {time:.2f}")
     
     def export_save(self) -> None:
         """Save the waveform to the specified file
@@ -1026,17 +1027,11 @@ class DriverMXO4X:
         """
         if set not in (1,2):
             return True
-        self.__write_to_dev(f"EXP:WAV:CURS {set}")
+        self.__write_to_dev(f"EXP:WAV:CURS CURSOR{set}")
         return False
     
-    """
-    NOTICE
-    Exporting multiple sources to a .zip file is not supported on firmware versions
-    older than 2.3.2.2! Our model is currently on firmware 1.4.2.2.
-    """
-    
     def export_sources(self, *src: str) -> bool:
-        """Select all waveforms to be exported to the file. Latest firmware (2.3.2.2) needed for multiple waveforms,
+        """Select all waveforms to be exported to the file. At least firmware (2.3.2.2) needed for multiple waveforms,
         else only the first source is selected.                                                                                                                                                                  
         Args:
             *src: One or more of the following waveforms
@@ -1067,7 +1062,8 @@ class DriverMXO4X:
             True if filename doesn't end on .csv or .ref, no other checks are done!
         """
         filename = filename.strip()
-        if filename[-4:] not in (".csv", ".ref"): #, ".zip"):
+        valid_extensions = (".ref", ".zip") if ',' in self.__read_from_dev("EXP:WAV:SOUR?") else (".csv", ".ref")
+        if filename[-4:] not in valid_extensions:
             return True
         self.__write_to_dev(f"EXP:WAV:NAME '{filename}'")
         return False
@@ -1077,7 +1073,7 @@ class DriverMXO4X:
         Returns:
             Path and filename for waveform exports as a string
         """
-        return self.__read_from_dev("EXP:WAV:NAME?")
+        return self.__read_from_dev("EXP:WAV:NAME?")[1:-1]
     
     def fra_enter(self) -> None:
         """Enter frequency response analysis mode. This is done automatically whenever an FRA function is called.
@@ -1204,14 +1200,13 @@ class DriverMXO4X:
         self.fra_enter()
         self.__write_to_dev(f"FRAN:AUT {int(state)}")
     
-    def fra_with_offset(self, offset: float = 0.0, wait_time: float = 1.) -> None:
-        # GEN1 is Signalgeber
+    def fra_with_offset(self, offset: float = 0, wait_time: float = 1) -> None:
+        # GEN1 is signal generator
         # GEN2 is offset
         self.fra_generator(1)
-        self.gen_set_default_index(2)
-        self.gen_enable()
-        self.gen_function("DC")
-        self.gen_offset(offset)
+        self.gen_enable(2)
+        self.gen_function("DC", 2)
+        self.gen_offset(offset, 2)
         sleep(wait_time)
         self.fra_run()
         
@@ -1244,13 +1239,11 @@ if __name__ == "__main__":
     d.serial_start()
     d.get_id()
 
-    d.do_reset()
-    d.change_display_mode(True)
-    d.change_remote_text("Hello World!")
+    #d.do_reset()
+    #d.change_display_mode(True)
+    #d.change_remote_text("Hello World!")
 
-    #d.fra_freq_start(100)
-    #d.fra_run()
-    d.fra_with_offset()
     d.live_command_mode()
+    
 
     d.serial_close()
