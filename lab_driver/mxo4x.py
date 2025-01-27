@@ -167,10 +167,16 @@ class DriverMXO4X:
         Returns:
             None
         """
-        backup_timeout = self.SerialDevice.visa_timeout
-        self.SerialDevice.visa_timeout = timeout
-        self.__write_to_dev("*WAI")
-        self.SerialDevice.visa_timeout = backup_timeout
+        if type(self.SerialDevice) == RsInstrument:
+            backup_timeout = self.SerialDevice.visa_timeout
+            self.SerialDevice.visa_timeout = timeout
+            self.__write_to_dev("*WAI")
+            self.SerialDevice.visa_timeout = backup_timeout
+        else:
+            backup_timeout = self.SerialDevice.timeout
+            self.SerialDevice.timeout = timeout
+            self.__write_to_dev("*WAI")
+            self.SerialDevice.timeout = backup_timeout
 
     def serial_open_known_target(self, resource_name: str, do_reset=False) -> None:
         """Open the serial connection to device
@@ -251,7 +257,7 @@ class DriverMXO4X:
             self.__write_to_dev("*RST")
             self.sync()
 
-    def change_display_mode(self, show_display: bool) -> None:
+    def set_display_activation(self, show_display: bool) -> None:
         """Decide whether display is shown during remote control
         Args:
             show_display: True to show display, False to show static image (may improve performance)
@@ -261,7 +267,7 @@ class DriverMXO4X:
         self.__write_to_dev(f"SYST:DISP:UPD {int(show_display)}")
         self.sync()
 
-    def change_remote_text(self, text: str) -> None:
+    def set_static_display_text(self, text: str) -> None:
         """Display an additional text in remote control
         Args:
             text: text to display
@@ -701,7 +707,7 @@ class DriverMXO4X:
             None
         """
         if int(self.__read_from_dev("SYST:DISP:UPD?")) == 0:
-            self.change_display_mode(True)
+            self.set_display_activation(True)
             self.sync()
         output_config = self.__fix_output_config(output_config)
         self.__write_to_dev(f"HCOP:IMM{output_config}")
@@ -713,7 +719,7 @@ class DriverMXO4X:
             None
         """
         if int(self.__read_from_dev("SYST:DISP:UPD?")) == 0:
-            self.change_display_mode(True)
+            self.set_display_activation(True)
             self.sync()
         output_config = self.__fix_output_config(output_config)
         self.__write_to_dev(f"HCOP:IMM{output_config}:NEXT")
@@ -1058,8 +1064,9 @@ class DriverMXO4X:
         """Set the filename for waveform exports. Local storage is in /home/storage/userData
         Args:
             filename: Path and filename with extension .csv or .ref for single waveform exports
+                and .ref or .zip for multiple waveform exports
         Returns:
-            True if filename doesn't end on .csv or .ref, no other checks are done!
+            True if filename doesn't end on .csv, .ref or .zip no other checks are done!
         """
         filename = filename.strip()
         valid_extensions = (".ref", ".zip") if ',' in self.__read_from_dev("EXP:WAV:SOUR?") else (".csv", ".ref")
@@ -1209,6 +1216,17 @@ class DriverMXO4X:
         self.gen_offset(offset, 2)
         sleep(wait_time)
         self.fra_run()
+    
+    def fra_export_results(self) -> None:
+        """Export the results of the FRA measurement to a file
+        Returns:
+            None
+        """
+        self.fra_enter()
+        self.__write_to_dev("EXP:RES:SEL:FRA:RES 1")
+        self.__write_to_dev("EXP:RES:SEL:FRA:MARK 1")
+        self.__write_to_dev("EXP:RES:SEL:FRA:MARG 1")
+        self.__write_to_dev("EXP:RES:SAVE")
         
     
     def live_command_mode(self):
@@ -1239,8 +1257,8 @@ if __name__ == "__main__":
     d.serial_start()
     d.get_id()
 
-    #d.do_reset()
-    #d.change_display_mode(True)
+    d.do_reset()
+    d.set_display_activation(True)
     #d.change_remote_text("Hello World!")
 
     d.live_command_mode()
