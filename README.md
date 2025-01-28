@@ -31,3 +31,8 @@ is the current of the measurement. This pair format of measurements repeats
 for the entire file. SI-Units are used (V and A). Values are stored in little
 endian format. Conversion to CSV should be vastly faster using a simple C
 program instead of the machine's built-in converter.
+
+### MXO44 notice:
+The device freezes upon the detection of a USB (dis-)connection event and will
+cease all functionality on firmware version 2.4.2.1. The only fix is cutting
+power to the device by holding the power button or plugging it from the socket.

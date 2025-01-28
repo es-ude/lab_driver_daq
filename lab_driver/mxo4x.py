@@ -1217,17 +1217,24 @@ class DriverMXO4X:
         sleep(wait_time)
         self.fra_run()
     
-    def fra_export_results(self) -> None:
+    def fra_export_results(self, results: bool = None, marker: bool = None, margin: bool = None) -> None:
         """Export the results of the FRA measurement to a file
+        Args:
+            results: True to export FRA results; frequency, gain, phase and amplitude of each sample
+            marker: True to export marker results; frequency, gain and phase
+            margin: True to export margin results; frequency and value/gain and phase
         Returns:
             None
         """
         self.fra_enter()
-        self.__write_to_dev("EXP:RES:SEL:FRA:RES 1")
-        self.__write_to_dev("EXP:RES:SEL:FRA:MARK 1")
-        self.__write_to_dev("EXP:RES:SEL:FRA:MARG 1")
+        states = [results, marker, margin]
+        cmds = [f"EXP:RES:SEL:FRA:{x}" for x in ["RES", "MARK", "MARG"]]
+        if all(int(self.__read_from_dev(c+'?')) == 0 for c in cmds) or all(not s for s in states):
+            states[0] = True  
+        for (state, cmd) in zip(states, cmds):
+            if state is not None:
+                self.__write_to_dev(f"{cmd} {int(state)}")
         self.__write_to_dev("EXP:RES:SAVE")
-        
     
     def live_command_mode(self):
         print(">> LIVE COMMAND MODE")
@@ -1257,11 +1264,10 @@ if __name__ == "__main__":
     d.serial_start()
     d.get_id()
 
-    d.do_reset()
+    #d.do_reset()
     d.set_display_activation(True)
-    #d.change_remote_text("Hello World!")
+    #d.set_static_display_text("Hello World!")
 
     d.live_command_mode()
-    
 
     d.serial_close()
