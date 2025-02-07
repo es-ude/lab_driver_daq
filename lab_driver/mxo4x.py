@@ -1242,6 +1242,15 @@ class DriverMXO4X:
                 self.__write_to_dev(f"{cmd} {int(state)}")
         self.__write_to_dev("EXP:RES:SAVE")
     
+    def fra_wait_for_finish(self) -> None:
+        """Wait for the FRA analysis to finish. This is a blocking function
+        Returns:
+            None
+        """
+        self.fra_enter()
+        while self.__read_from_dev("FRAN:STAT?") == "RUN":
+            sleep(0.1)
+    
     def live_command_mode(self) -> None:
         """DEBUGGING - enter statements during the execution of the program using the Python
         interpreter. Results and errors are printed.
