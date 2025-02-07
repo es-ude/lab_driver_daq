@@ -118,6 +118,9 @@ class DriverMXO4X:
                 cmd, out = cmd[0], cmd[1]
                 print(f"{i:03}> {cmd}\n     >> {out}")
             i += 1
+    
+    def sync_device_time(self):
+        self.__write_to_dev(strftime("SYST:TIME %H,%M,%S"))
 
     def __init_dev(self, do_reset=True):
         """If the correct device is selected, initialise it and optionally do a reset
@@ -134,7 +137,7 @@ class DriverMXO4X:
             # that's why it worked there, but not on Linux
             # self.__write_to_dev("SYST:MIX")   # Instrument error detected: -113,"Undefined header;SYST:MIX"
             print(f"Right device is selected with: {self.get_id(False)}")
-            self.__write_to_dev(strftime("SYST:TIME %H,%M,%S"))
+            self.sync_device_time()
         else:
             print("Not right selected device. Please check!")
 
