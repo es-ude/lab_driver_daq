@@ -119,7 +119,11 @@ class DriverMXO4X:
                 print(f"{i:03}> {cmd}\n     >> {out}")
             i += 1
     
-    def sync_device_time(self):
+    def sync_device_time(self) -> None:
+        """Synchronise the device's time with this computer's. This is done automatically on every connection
+        Returns:
+            None
+        """
         self.__write_to_dev(strftime("SYST:TIME %H,%M,%S"))
 
     def __init_dev(self, do_reset=True):
