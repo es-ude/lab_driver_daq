@@ -119,7 +119,7 @@ class DriverNGUX01:
         else:
             for ite in range(0, num_iterations):
                 self.__write_to_dev("SYST:BEEP")
-                sleep(1)
+                sleep(.3)
 
     def do_reset(self) -> None:
         """Reset the device"""
@@ -160,8 +160,6 @@ class DriverNGUX01:
 
     def get_voltage_range(self) -> float:
         """Get measurement voltage range
-        Args:
-            N/A
         Returns:
             Range 6 or 20 volts
         """
@@ -183,64 +181,10 @@ class DriverNGUX01:
 
     def get_current_range(self) -> float:
         """Get measurement current range
-        Args:
-            N/A
         Returns:
             Range from 0 to 8 Amps
         """
         return float(self.__read_from_dev("CURR:RANG?"))
-
-    def set_fastlog_sample_rate(self, rate: float) -> bool:
-        """Set sample rate of FastLog
-        Args:
-            rate: Either 500, 250, 50, 10, 1 or 0.1 kilosamples per second
-        Returns:
-            True when argument is invalid
-        """
-        if self.__float_eq(rate, 0.1):
-            self.__write_to_dev("FLOG:SRAT S100")
-        elif rate in (1, 10, 50, 250, 500):
-            self.__write_to_dev(f"FLOG:SRAT S{rate}k")
-        else:
-            return True
-        return False
-
-    def get_fastlog_sample_rate(self) -> float:
-        """Get sample rate of FastLog
-        Args:
-            N/A
-        Returns:
-            FastLog sample rate in kilosamples per second
-        """
-        rate = self.__read_from_dev("FLOG:SRAT?").strip()[1:]   # rate has format "S###[k]", get rid of the S
-        if rate[-1] == 'k':
-            return float(rate[:-1])
-        else:
-            return 0.1
-
-    def set_fastlog_duration(self, duration: int) -> None:
-        """Set duration of a FastLog sample
-        Args:
-            duration: Sample duration in seconds
-        Returns:
-            None
-        """
-        self.__write_to_dev(f"FLOG:FILE:DUR {duration}")
-
-    def get_fastlog_duration(self) -> int:
-        """Get duration of a FastLog sample
-        Args:
-            N/A
-        Returns:
-            Duration in seconds
-        """
-        return float(self.__read_from_dev("FLOG:FILE:DUR?"))
-
-    def set_fastlog_triggered(self, triggered: bool) -> None:
-        self.__write_to_dev(f"FLOG:TRIG {int(triggered)}")
-
-    def get_fastlog_triggered(self) -> bool:
-        return bool(int(self.__read_from_dev("FLOG:TRIG?")))
 
     def set_voltage(self, val: float) -> None:
         """Setting the channel voltage value"""
@@ -356,6 +300,54 @@ class DriverNGUX01:
                 print(f"... meas. energy: {1e3 * val:.6f} mWh")
             return val
 
+    def set_fastlog_sample_rate(self, rate: float) -> bool:
+        """Set sample rate of FastLog
+        Args:
+            rate: Either 500, 250, 50, 10, 1 or 0.1 kilosamples per second
+        Returns:
+            True when argument is invalid
+        """
+        if self.__float_eq(rate, 0.1):
+            self.__write_to_dev("FLOG:SRAT S100")
+        elif rate in (1, 10, 50, 250, 500):
+            self.__write_to_dev(f"FLOG:SRAT S{rate}k")
+        else:
+            return True
+        return False
+
+    def get_fastlog_sample_rate(self) -> float:
+        """Get sample rate of FastLog
+        Returns:
+            FastLog sample rate in kilosamples per second
+        """
+        rate = self.__read_from_dev("FLOG:SRAT?").strip()[1:]   # rate has format "S###[k]", get rid of the S
+        if rate[-1] == 'k':
+            return float(rate[:-1])
+        else:
+            return 0.1
+
+    def set_fastlog_duration(self, duration: int) -> None:
+        """Set duration of a FastLog sample
+        Args:
+            duration: Sample duration in seconds
+        Returns:
+            None
+        """
+        self.__write_to_dev(f"FLOG:FILE:DUR {duration}")
+
+    def get_fastlog_duration(self) -> int:
+        """Get duration of a FastLog sample
+        Returns:
+            Duration in seconds
+        """
+        return float(self.__read_from_dev("FLOG:FILE:DUR?"))
+
+    def set_fastlog_triggered(self, triggered: bool) -> None:
+        self.__write_to_dev(f"FLOG:TRIG {int(triggered)}")
+
+    def get_fastlog_triggered(self) -> bool:
+        return bool(int(self.__read_from_dev("FLOG:TRIG?")))
+
     def do_fastlog(self, duration: int = None, sample_rate: float = None) -> bool:
         """Start a FastLog measurement
         Args:
@@ -389,7 +381,7 @@ class DriverNGUX01:
         Returns:
             True if USB device is detected, False otherwise
         """
-        return "USB" in dev.test("FLOG:FILE:TPAR?")
+        return "USB" in self.test("FLOG:FILE:TPAR?")
     
     def is_usb_disconnected(self) -> bool:
         """EVENT - Convenience function for negation of is_usb_connected, to avoid lambda expression

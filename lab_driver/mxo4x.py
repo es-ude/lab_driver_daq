@@ -509,10 +509,18 @@ class DriverMXO4X:
         return self.__dig_activation_state(bits, False, logic_group)
 
     def dig_show_dig_signals(self, logic_group: int = None) -> None:
+        """Show the digital signals on the GUI
+        Returns:
+            None
+        """
         logic_group = self.__fix_logic_index(logic_group)
         self.__write_to_dev(f"PBUS{logic_group}:DISP:SHDI ON")
 
     def dig_hide_dig_signals(self, logic_group: int = None) -> None:
+        """Hide the digital signals on the GUI
+        Returns:
+            None
+        """
         logic_group = self.__fix_logic_index(logic_group)
         self.__write_to_dev(f"PBUS{logic_group}:DISP:SHDI OFF")
 
