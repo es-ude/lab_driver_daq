@@ -1,21 +1,14 @@
 from time import sleep, strftime
 import pyvisa
 import platform
-import sys
 from RsInstrument import RsInstrument
 
 mHz = .001
 KHz = 1000
 MHz = 1000000
 
-# Starting with Python 3.12, we may use these typedef-esque statements
-# The interpreter on older Python versions will throw an invalid syntax exception though,
-# and we don't have a preprocessor in Python, so use exec() to delay parsing
-if sys.version_info[:2] >= (3,12):
-    # Threeway type is like a boolean, but with 3 states -1,0,1
-    exec("type Threeway = int")
-else:
-    Threeway = int
+# Threeway type is like a boolean, but with 3 states -1,0,1
+Threeway = int
 LEFT: Threeway = -1
 MIDDLE: Threeway = 0
 RIGHT: Threeway = 1
