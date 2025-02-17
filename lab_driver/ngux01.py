@@ -205,7 +205,13 @@ class DriverNGUX01:
             self.__write_to_dev(f"CURR {val_set:.4f}")
 
     def set_current_limits(self, val_min: float, val_max: float) -> None:
-        """Setting the current limitations value"""
+        """Setting the current limitations value
+        Args:
+            val_min: Lower limit in Amps
+            val_max: Upper limit in Amps
+        Returns:
+            None
+        """
         if not self.SerialActive:
             print("... not done due to wrong device")
         else:
@@ -215,14 +221,24 @@ class DriverNGUX01:
             sleep(0.5)
 
     def set_output_impedance(self, resistance: float) -> None:
-        """Setting the output impedance of device"""
+        """Setting the output impedance of device
+        Args:
+            resistance: Impedance in Ohms
+        Returns:
+            None
+        """
         if not self.SerialActive:
             print("... not done due to wrong device")
         else:
             self.__write_to_dev(f"OUTP:IMP {resistance:.5f}")
 
     def set_output_mode(self, mode=0) -> None:
-        """Setting the output mode [0: Auto, 1: Sink, 2: Source]"""
+        """Setting the output mode
+        Args:
+            mode: 0 = Auto, 1 = Sink, 2 = Source
+        Returns:
+            None
+        """
         if not self.SerialActive:
             print("... not done due to wrong device")
         else:
@@ -235,7 +251,12 @@ class DriverNGUX01:
             self.__write_to_dev(f"OUTP:MODE {str_out}")
 
     def output_activate(self, use_fast_output=False) -> None:
-        """Activating the output"""
+        """Activating the output
+        Args:
+            use_fast_output: (De-)Activate fast transient response
+        Returns:
+            None
+        """
         if not self.SerialActive:
             print("... not done due to wrong device")
         else:
@@ -247,7 +268,10 @@ class DriverNGUX01:
             sleep(0.5)
 
     def output_deactivated(self) -> None:
-        """Deactivating the output"""
+        """Deactivating the output
+        Returns:
+            None
+        """
         if not self.SerialActive:
             print("... not done due to wrong device")
         else:
@@ -257,7 +281,12 @@ class DriverNGUX01:
             sleep(0.5)
 
     def get_measurement_voltage(self, do_print=True) -> float:
-        """Reading the voltage"""
+        """Reading the voltage
+        Args:
+            do_print: Also print the voltage value to stdout
+        Returns:
+            The voltage value
+        """
         if not self.SerialActive:
             print("... not done due to wrong device")
             return 0.0
@@ -268,7 +297,12 @@ class DriverNGUX01:
             return val
 
     def get_measurement_current(self, do_print=True) -> float:
-        """Reading the current"""
+        """Reading the current
+        Args:
+            do_print: Also print the current value to stdout
+        Returns:
+            The current value
+        """
         if not self.SerialActive:
             print("... not done due to wrong device")
             return 0.0
@@ -279,7 +313,12 @@ class DriverNGUX01:
             return val
 
     def get_measurement_power(self, do_print=True) -> float:
-        """Reading the power"""
+        """Reading the power
+        Args:
+            do_print: Also print the power value to stdout
+        Returns:
+            The power value
+        """
         if not self.SerialActive:
             print("... not done due to wrong device")
             return 0.0
@@ -290,7 +329,12 @@ class DriverNGUX01:
             return val
 
     def get_measurement_energy(self, do_print=True) -> float:
-        """Reading the energy"""
+        """Reading the energy
+        Args:
+            do_print: Also print the energy value to stdout
+        Returns:
+            The energy value
+        """
         if not self.SerialActive:
             print("... not done due to wrong device")
             return 0.0
@@ -343,9 +387,19 @@ class DriverNGUX01:
         return float(self.__read_from_dev("FLOG:FILE:DUR?"))
 
     def set_fastlog_triggered(self, triggered: bool) -> None:
+        """Set whether FastLog is started by a trigger event
+        Args:
+            triggered: True to receive triggers, False to ignore
+        Returns:
+            None
+        """
         self.__write_to_dev(f"FLOG:TRIG {int(triggered)}")
 
     def get_fastlog_triggered(self) -> bool:
+        """Get whether FastLog is started by a trigger event
+        Returns:
+            True if trigger is activated, False if not
+        """
         return bool(int(self.__read_from_dev("FLOG:TRIG?")))
 
     def do_fastlog(self, duration: int = None, sample_rate: float = None) -> bool:
