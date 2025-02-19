@@ -2,6 +2,7 @@ from time import sleep, strftime
 import pyvisa
 import platform
 from RsInstrument import RsInstrument
+from scan_instruments import scan_instruments
 
 mHz = .001
 KHz = 1000
@@ -20,29 +21,6 @@ ZERO: Threeway = 0
 HIGH: Threeway = 1
 OFF: Threeway = 0
 
-
-
-def scan_instruments(do_print=True) -> list:
-    """Scanning the VISA bus for instruments
-    Args:
-        do_print: True to print every detected instrument
-    Returns:
-        List of all detected instruments
-    """
-    rm = pyvisa.ResourceManager()
-    obj_inst = rm.list_resources()
-
-    out_dev_adr = list()
-    for idx, inst_name in enumerate(obj_inst):
-        out_dev_adr.append(inst_name)
-        # --- Printing the stuff
-        if do_print:
-            if idx == 0:
-                print(f"\nUsing VISA driver: {rm}")
-                print("Available devices")
-                print("--------------------------------------")
-            print(f"{idx}: {inst_name}")
-    return out_dev_adr
 
 
 class DriverMXO4X:
@@ -208,13 +186,16 @@ class DriverMXO4X:
         Returns:
             None
         """
-        if platform.system() == "Linux":
+        if False and platform.system() == "Linux":
             # Resource string for MXO44
             self.serial_open_known_target("USB0::0x0AAD::0x0197::1335.5050k04-201451::INSTR", do_reset)
             return
 
         list_dev = scan_instruments(do_print=False)
-        rm = pyvisa.ResourceManager()
+        if platform.system() == "Linux":
+            rm = pyvisa.ResourceManager("/usr/lib/librsvisa.so@ivi")
+        else:
+            rm = pyvisa.ResourceManager()
 
         # --- Checking if device address is right
         for inst_name in list_dev:
@@ -1296,7 +1277,14 @@ class DriverMXO4X:
 if __name__ == "__main__":
     scan_instruments()
 
+    #rm = pyvisa.ResourceManager("/usr/lib/librsvisa.so@ivi")
+    #mx = rm.open_resource(rm.list_resources()[0])
+    #print("CONNECTED WITH -", mx.query("*IDN?"))
+
     d = DriverMXO4X()
+    #d.serial_open_known_target("USB0::0x0AAD::0x01D7::113613::INSTR")
+    #                          "USB0::0x0AAD::0x01D7::1335.8794k04-113613::INSTR"
+    #                          "USB0::0x0AAD::0x0197::1335.5050k04-201451::INSTR"
     d.serial_start()
     d.get_id()
 
