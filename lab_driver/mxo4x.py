@@ -34,6 +34,7 @@ class DriverMXO4X:
     _trig_seq = False   # is trigger source sequence (else single)?
     _cmd_stack = []     # all executed commands are stored here LIFO for debugging purposes
     _firmware_version: str
+    _visa_lib: str
     src_analogue = tuple(f"C{i}" for i in range(1,5))
     src_digital = tuple(f"D{i}" for i in range(16))
     src_math = tuple(f"M{i}" for i in range(1,6))
@@ -48,7 +49,7 @@ class DriverMXO4X:
                   src_specmax, src_specmin, src_specnorm, src_specaver)
 
     def __init__(self):
-        pass
+        self._visa_lib = "/usr/lib/librsvisa.so@ivi" if platform.system() == "Linux" else ""
 
     def __write_to_dev(self, order: str) -> None:
         """Wrapper for executing commands on device
@@ -166,14 +167,14 @@ class DriverMXO4X:
         Returns:
             None
         """
-        if platform.system() == "Linux":
+        if False and platform.system() == "Linux":
             try:
                 self.SerialDevice = RsInstrument(resource_name)
             except:
                 print(f"Could not find or open device {resource_name}")
                 return
         else:
-            rm = pyvisa.ResourceManager()
+            rm = pyvisa.ResourceManager(self._visa_lib)
             self.SerialDevice = rm.open_resource(resource_name)
 
         self.__do_check_idn()
@@ -192,10 +193,7 @@ class DriverMXO4X:
             return
 
         list_dev = scan_instruments(do_print=False)
-        if platform.system() == "Linux":
-            rm = pyvisa.ResourceManager("/usr/lib/librsvisa.so@ivi")
-        else:
-            rm = pyvisa.ResourceManager()
+        rm = pyvisa.ResourceManager(self._visa_lib)
 
         # --- Checking if device address is right
         for inst_name in list_dev:
