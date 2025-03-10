@@ -1,9 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lab_driver", "example"]
+exclude = ["hardware"]
+namespaces = false
+
+
+[tool.hatch.build.targets.wheel]
+packages = ["lab_driver"]
+
+
 [project]
 name = "driver-meas-dev"
 version = "0.1.0"
-description = "Add your description here"
+description = "Python API for handling Measurement Devices for Enabling automated Testing"
 readme = "README.md"
+license =  {file = "LICENSE"}
 requires-python = ">=3.11"
+authors = [
+  {name = "Andreas Erbsloeh", email = "andreas.erbsloeh@uni-due.de"},
+]
+maintainers = [
+    {name = 'Ismail Yilmaz', email = 'ismail.yilmaz@stud.uni-due.de'}
+]
 dependencies = [
     "numpy>=2.2.2",
     "pyserial>=3.5",
