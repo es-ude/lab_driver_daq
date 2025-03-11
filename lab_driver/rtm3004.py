@@ -35,6 +35,25 @@ class DriverRTM3004(DriverMXO4X):
             self._cmd_stack.append((order, text_out))
         return text_out
 
+    def live_command_mode(self) -> None:
+        """DEBUGGING - enter statements during the execution of the program using the Python
+        interpreter. Results and errors are printed.
+        Returns:
+            None
+        """
+        print(">> LIVE COMMAND MODE")
+        print(">> Type 'exit' to stop.")
+        while (cmd := input("> ")).strip() != "exit":
+            try:
+                output = {}
+                exec(f"output = {cmd}", globals(), output)
+                if output["output"] is not None:
+                    print(output["output"])
+            except Exception as e:
+                print(e)
+                print(">> Command failed. Try again.")
+        print(">> END OF LIVE COMMAND MODE")
+
     def get_id(self, do_print=True) -> str:
         """Getting the device ID
         Args:
@@ -99,6 +118,30 @@ class DriverRTM3004(DriverMXO4X):
 
         # --- Init of device
         self.__init_dev(do_reset)
+    
+    def scale_vertical(self, scale: float) -> bool:
+        """Sets the vertical scale (V/div) of all channels on the GUI
+        Args:
+            scale: [0.001,10] Volts per division
+        Returns:
+            True if scale is out of range
+        """
+        if not (0.001 <= scale <= 10):
+            return True
+        self.__write_to_dev(f"CHAN:SCAL {scale}")
+        return False
+    
+    def scale_horizontal(self, scale: float) -> bool:
+        """Sets the horizontal (time) scale of all channels on the GUI
+        Args:
+            scale: [1e-9,50] seconds, 1 ns precision
+        Returns:
+            True if scale is out of range
+        """
+        if not (1e-9 <= scale <= 50):
+            return True
+        self.__write_to_dev(f"TIM:SCAL {scale:.9f}")
+        return False
 
     def gen_enable(self) -> None:
         """Enable waveform generator
@@ -146,6 +189,63 @@ class DriverRTM3004(DriverMXO4X):
             None
         """
         self.__write_to_dev(f"WGEN:FREQ {frequency:.3f}")
+
+    def gen_amplitude(self, amplitude: float) -> bool:
+        """Set amplitude of waveform
+        Args:
+            amplitude: amplitude in volt from [0.06,6], 0.01 increment
+        Returns:
+            True if amplitude out of range
+        """
+        if not (0.06 <= amplitude <= 6):
+            return True
+        self.__write_to_dev(f"WGEN:VOLT {amplitude:.2f}")
+        return False
+
+    def gen_offset(self, offset: float) -> bool:
+        """Set vertical offset of generated waveform
+        Args:
+            offset: vertical offset in volt from [-5,+5], 0.0001 increment
+        Returns:
+            True if offset out of range
+        """
+        if not (-5 <= offset <= 5):
+            return True
+        self.__write_to_dev(f"WGEN:VOLT:OFFS {offset:.4f}")
+        return False    
+
+    def gen_preset(self) -> None:
+        """Preset the generator to a default setup including following settings:
+        Sine wavefunction, 1 MHz frequency, 1 Vpp amplitude, 500 ns horizontal scale, 0.5 V/div vertical scale  
+        Returns:
+            None
+        """
+        self.gen_function("SINE")
+        self.gen_frequency(1*MHz)
+        self.gen_amplitude(1)
+        self.scale_horizontal(5e-7)
+        self.scale_vertical(.5)
+    
+    def sweep_freq_start(self, freq: float) -> None:
+        self.__write_to_dev(f"WGEN:SWE:FST {freq}")
+    
+    def sweep_freq_stop(self, freq: float) -> None:
+        self.__write_to_dev(f"WGEN:SWE:FEND {freq}")
+    
+    def sweep_duration(self, duration: float) -> None:
+        self.__write_to_dev(f"WGEN:SWE:TIME {duration:.3f}")
+    
+    def sweep_type(self, shape: str) -> bool:
+        if shape := shape.upper() not in ("LINEAR", "LOGARITHMIC", "TRIANGLE", "LIN", "LOG", "TRI"):
+            return True
+        self.__write_to_dev(f"WGEN:SWE:TYPE {shape}")
+        return False
+    
+    def sweep_run(self):
+        self.__write_to_dev(f"WGEN:SWE ON")
+    
+    def sweep_stop(self):
+        self.__write_to_dev(f"WGEN:SWE OFF")
         
 
 if __name__ == "__main__":
@@ -154,11 +254,7 @@ if __name__ == "__main__":
     d.get_id()
     d.do_reset()
     d.gen_enable()
-    d.gen_function("RAMP")
-    sleep(2)
-    d.gen_function("SINE")
-    sleep(1)
-    d.gen_frequency(100)
-    print(d.view_cmd_stack())
+    d.gen_preset()
+    d.live_command_mode()
     d.serial_close()
     
