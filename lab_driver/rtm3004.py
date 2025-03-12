@@ -27,7 +27,7 @@ class DriverRTM3004(DriverMXO4X):
         """
         try:
             text_out = ""   # default value needed, else variable may never be assigned!
-            text_out = self.SerialDevice.query(order)
+            text_out = self.SerialDevice.query(order).strip("\0").strip()
         except Exception as e:
             self._cmd_stack.append((order, f"FAILED - {e} - {text_out}"))
             raise e
@@ -54,6 +54,18 @@ class DriverRTM3004(DriverMXO4X):
                 print(">> Command failed. Try again.")
         print(">> END OF LIVE COMMAND MODE")
 
+    def test(self, cmd: str):
+        """Test any command with the device
+        Args:
+            cmd: Some command to be sent to the device
+        Returns:
+            Result of the command if it was a query, None if it was a write command
+        """
+        if '?' in cmd:
+            return self.__read_from_dev(cmd)
+        else:
+            self.__write_to_dev(cmd)
+
     def get_id(self, do_print=True) -> str:
         """Getting the device ID
         Args:
@@ -62,7 +74,7 @@ class DriverRTM3004(DriverMXO4X):
             Device ID as a string
         """
         # For some reason the ID ends on three null characters, so strip the string 
-        id = self.__read_from_dev("*IDN?").strip("\0").strip()
+        id = self.__read_from_dev("*IDN?")
         if do_print:
             print(id)
         return id
@@ -226,26 +238,41 @@ class DriverRTM3004(DriverMXO4X):
         self.scale_horizontal(5e-7)
         self.scale_vertical(.5)
     
-    def sweep_freq_start(self, freq: float) -> None:
-        self.__write_to_dev(f"WGEN:SWE:FST {freq}")
+    def fra_enter(self):
+        """Enter frequency response analysis mode. This is done automatically whenever an FRA function is called.
+        Returns:
+            None
+        """
+        self.__write_to_dev("SPEC ON")
     
-    def sweep_freq_stop(self, freq: float) -> None:
-        self.__write_to_dev(f"WGEN:SWE:FEND {freq}")
-    
-    def sweep_duration(self, duration: float) -> None:
-        self.__write_to_dev(f"WGEN:SWE:TIME {duration:.3f}")
-    
-    def sweep_type(self, shape: str) -> bool:
-        if shape := shape.upper() not in ("LINEAR", "LOGARITHMIC", "TRIANGLE", "LIN", "LOG", "TRI"):
-            return True
-        self.__write_to_dev(f"WGEN:SWE:TYPE {shape}")
+    def fra_exit(self):
+        """Exit frequency response analysis mode
+        Returns:
+            None
+        """
+        self.__write_to_dev("SPEC OFF")
+
+    def fra_freq_start(self, freq: float) -> None:
+        """Set the start frequency of the sweep
+        Args:
+            freq: Frequency in Hz
+        Returns:
+            None
+        """
+        #self.fra_enter()
+        self.__write_to_dev(f"SPEC:FREQ:STAR {freq}")
         return False
     
-    def sweep_run(self):
-        self.__write_to_dev(f"WGEN:SWE ON")
-    
-    def sweep_stop(self):
-        self.__write_to_dev(f"WGEN:SWE OFF")
+    def fra_freq_stop(self, freq: float) -> None:
+        """Set the stop frequency of the sweep
+        Args:
+            freq: Frequency in Hz
+        Returns:
+            None
+        """
+        #self.fra_enter()
+        self.__write_to_dev(f"SPEC:FREQ:STOP {freq}")
+        return False
         
 
 if __name__ == "__main__":
@@ -253,8 +280,9 @@ if __name__ == "__main__":
     d.serial_start()
     d.get_id()
     d.do_reset()
-    d.gen_enable()
-    d.gen_preset()
+    #d.fra_enter()
+    d.fra_freq_start(10*MHz)
+    d.fra_freq_stop(16*MHz)
     d.live_command_mode()
     d.serial_close()
     
