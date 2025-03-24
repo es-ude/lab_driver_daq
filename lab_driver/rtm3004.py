@@ -130,6 +130,18 @@ class DriverRTM3004(DriverMXO4X):
 
         # --- Init of device
         self.__init_dev(do_reset)
+
+    def do_reset(self) -> None:
+        """Reset the device, then wait two seconds
+        Returns:
+            None
+        """
+        if not self.SerialActive:
+            print("... not done due to wrong device")
+        else:
+            self.__write_to_dev("*RST")
+            self.sync()
+            sleep(1)
     
     def scale_vertical(self, scale: float) -> bool:
         """Sets the vertical scale (V/div) of all channels on the GUI
@@ -244,6 +256,7 @@ class DriverRTM3004(DriverMXO4X):
             None
         """
         self.__write_to_dev("SPEC ON")
+        self.sync()
     
     def fra_exit(self):
         """Exit frequency response analysis mode
@@ -251,26 +264,29 @@ class DriverRTM3004(DriverMXO4X):
             None
         """
         self.__write_to_dev("SPEC OFF")
-
+        self.sync()
+    
     def fra_freq_start(self, freq: float) -> None:
-        """Set the start frequency of the sweep
+        """Set the start frequency of the sweep.
+        NOTICE: This function is broken and should not be relied upon.
         Args:
             freq: Frequency in Hz
         Returns:
             None
         """
-        #self.fra_enter()
+        self.fra_enter()
         self.__write_to_dev(f"SPEC:FREQ:STAR {freq}")
         return False
     
     def fra_freq_stop(self, freq: float) -> None:
         """Set the stop frequency of the sweep
+        NOTICE: This function is broken and should not be relied upon.
         Args:
             freq: Frequency in Hz
         Returns:
             None
         """
-        #self.fra_enter()
+        self.fra_enter()
         self.__write_to_dev(f"SPEC:FREQ:STOP {freq}")
         return False
         
@@ -280,9 +296,9 @@ if __name__ == "__main__":
     d.serial_start()
     d.get_id()
     d.do_reset()
-    #d.fra_enter()
+    d.fra_enter()
+    sleep(1)
     d.fra_freq_start(10*MHz)
     d.fra_freq_stop(16*MHz)
     d.live_command_mode()
     d.serial_close()
-    

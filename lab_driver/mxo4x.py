@@ -7,6 +7,7 @@ from scan_instruments import scan_instruments
 mHz = .001
 KHz = 1000
 MHz = 1000000
+GHz = 1000000000
 
 # Threeway type is like a boolean, but with 3 states -1,0,1
 Threeway = int
