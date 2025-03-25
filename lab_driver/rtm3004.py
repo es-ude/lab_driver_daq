@@ -250,6 +250,45 @@ class DriverRTM3004(DriverMXO4X):
         self.scale_horizontal(5e-7)
         self.scale_vertical(.5)
     
+    def trig_event_mode(self, mode: str) -> bool:
+        """Set the trigger mode, which determines device behaviour if no trigger occurs.
+        Args:
+            mode: "AUTO" or "NORM"/"NORMAL"
+        Returns:
+            True if trigger mode is invalid
+        """
+        if mode := mode.upper() not in ("AUTO", "NORM", "NORMAL"):
+            return True
+        self.__write_to_dev(f"TRIG:A:MODE {mode}")
+        return False
+    
+    def trig_source(self, source: str) -> bool:
+        sources = [f"CH{i}" for i in range(1,5)] + [f"D{i}" for i in range(16)] + ["SBUS1", "SBUS2", "EXT", "LINE"]
+        if source not in sources:
+            return True
+        self.__write_to_dev(f"TRIG:A:SOUR {source}")
+        return False
+    
+    def trig_delay(self, delay: float) -> None:
+        """Sets the time that the instrument waits after an A-trigger until it recognises B-triggers
+        Args:
+            delay: delay in seconds in range [20e-9, 6.871946854]
+        Returns:
+            None
+        """
+        delay = self.__clamp(20e-9, delay, 6.871946854)
+        self.__write_to_dev(f"TRIG:B:DEL {delay}")
+
+    def trig_b_trigger_count(self, count: int) -> None:
+        """Number of B-trigger conditions that need to happen before the B-trigger is actually triggered.
+        Args:
+            count: number of times B-trigger must occur in sequence from 1 to 65535
+        Returns:
+            None
+        """
+        count = self.__clamp(1, count, 65535)
+        self.__write_to_dev(f"TRIG:B:EVEN:COUNT {count}")
+    
     def fra_enter(self):
         """Enter frequency response analysis mode. This is done automatically whenever an FRA function is called.
         Returns:
@@ -289,7 +328,20 @@ class DriverRTM3004(DriverMXO4X):
         self.fra_enter()
         self.__write_to_dev(f"SPEC:FREQ:STOP {freq}")
         return False
-        
+    
+    def fra_input_channel(self, channel: int) -> bool:
+        """Set the channel used for the input signal of the device
+        Args:
+            channel: 1 to 4
+        Returns:
+            True for invalid channel number
+        """
+        if channel not in (1,2,3,4):
+            return True
+        self.fra_enter()
+        self.__write_to_dev(f"SPEC:SOUR CH{channel}")
+        return False
+    
 
 if __name__ == "__main__":
     d = DriverRTM3004()

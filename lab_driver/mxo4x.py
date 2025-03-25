@@ -753,7 +753,7 @@ class DriverMXO4X:
         self.__write_to_dev(f"TRIG:MEV:SEQ1:DEL {delay}")
 
     def trig_b_trigger_count(self, count: int) -> None:
-        """
+        """Number of B-trigger conditions that need to happen before the B-trigger is actually triggered.
         Args:
             count: number of times B-trigger must occur in sequence from 1 to 2147483647
         Returns:
