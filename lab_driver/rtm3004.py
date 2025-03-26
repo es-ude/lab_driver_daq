@@ -288,6 +288,40 @@ class DriverRTM3004(DriverMXO4X):
         """
         count = self.__clamp(1, count, 65535)
         self.__write_to_dev(f"TRIG:B:EVEN:COUNT {count}")
+
+    def trig_find_level(self) -> None:
+        """Automatically sets trigger level to half of signal amplitude
+        Returns:
+            None
+        """
+        self.__write_to_dev("TRIG:A:FIND")
+
+    def trig_edge_noisereject(self, state: bool) -> None:
+        """Set an additional 100 MHz lowpass filter in the trigger path
+        Args:
+            state: True for noise rejection, False to disable
+        Returns:
+            None
+        """
+        self.__write_to_dev(f"TRIG:A:EDGE:FILT:NREJ {int(state)}")
+
+    def trig_edge_coupling(self, coupling: str) -> bool:
+        """Sets the coupling for the trigger source (case-insensitive).
+        Args:
+            coupling:
+                "DC" - Direct current coupling. The trigger signal remains unchanged.
+                "AC" - Alternating current coupling. A highpass filter removes the
+                DC offset voltage from the trigger signal.
+                "LFR" - Sets the trigger coupling to high frequency. A 15 kHz highpass filter
+                removes lower frequencies from the trigger signal. Use this mode only with
+                very high frequency signals.
+        Returns:
+            True if coupling mode is invalid
+        """
+        if coupling := coupling.upper() not in ("AC", "DC", "LFR"):
+            return True
+        self.__write_to_dev(f"TRIG:A:EDGE:COUP {coupling}")
+        return False
     
     def fra_enter(self):
         """Enter frequency response analysis mode. This is done automatically whenever an FRA function is called.
