@@ -1,3 +1,5 @@
+from requests import options
+
 from mxo4x import *
 
 class DriverRTM3004(DriverMXO4X):
@@ -304,6 +306,19 @@ class DriverRTM3004(DriverMXO4X):
             None
         """
         self.__write_to_dev(f"TRIG:A:EDGE:FILT:NREJ {int(state)}")
+    
+    def trig_hysteresis(self, level: str | int) -> bool:
+        options = ("AUTO", "SMALL", "MEDIUM", "LARGE", "S", "M", "L", 0, 1, 2, 3)
+        if type(level) is str:
+            level = level.upper()
+            if len(level) == 1:
+                level = options[options.index(level) - 3]
+        if level not in options:
+            return True
+        if type(level) is int:
+            level = options[level]
+        self.__write_to_dev(f"TRIG:A:HYST {level}")
+        return False
 
     def trig_edge_coupling(self, coupling: str) -> bool:
         """Sets the coupling for the trigger source (case-insensitive).

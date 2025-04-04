@@ -11,16 +11,12 @@ GHz = 1000000000
 
 # Threeway type is like a boolean, but with 3 states -1,0,1
 Threeway = int
-LEFT: Threeway = -1
-MIDDLE: Threeway = 0
-RIGHT: Threeway = 1
 NEGATIVE: Threeway = -1
 NEUTRAL: Threeway = 0
 POSITIVE: Threeway = 1
 LOW: Threeway = -1
-ZERO: Threeway = 0
-HIGH: Threeway = 1
 OFF: Threeway = 0
+HIGH: Threeway = 1
 
 
 
@@ -921,7 +917,7 @@ class DriverMXO4X:
     
     def trig_edge_noisereject(self, state: bool) -> None:
         """Enable an automatic hysteresis on the trigger level to
-        avoid unwanted trigger events caused by noise.
+        avoid unwanted trigger events caused by noise.  
         Args:
             state: True for noise rejection, False to disable
         Returns:
