@@ -308,6 +308,16 @@ class DriverRTM3004(DriverMXO4X):
         self.__write_to_dev(f"TRIG:A:EDGE:FILT:NREJ {int(state)}")
     
     def trig_hysteresis(self, level: str | int) -> bool:
+        """Sets a hysteresis range around the trigger level to avoid unwanted triggers by noise oscillations.
+        The value of each hysteresis level depends on the vertical scale.
+        Args:
+            level: "AUTO" = 0,
+                "SMALL" ("S") = 1,
+                "MEDIUM" ("M") = 2,
+                "LARGE" ("L") = 3
+        Returns:
+            True if level is invalid
+        """
         options = ("AUTO", "SMALL", "MEDIUM", "LARGE", "S", "M", "L", 0, 1, 2, 3)
         if type(level) is str:
             level = level.upper()
