@@ -252,10 +252,18 @@ class DriverRTM3004(DriverMXO4X):
         self.scale_horizontal(5e-7)
         self.scale_vertical(.5)
     
-    def trig_event_mode(self, mode: str) -> bool:
+    def trig_event_mode(self, sequence: bool) -> None:
+        """Select whether to trigger on a single event or a sequence of A and B events.
+        Args:
+            sequence: True to enable sequence trigger of A and B, False for only an A trigger
+        """
+        self.__write_to_dev(f"TRIG:B:ENAB {sequence}")
+        return False
+    
+    def trig_a_mode(self, mode: str):
         """Set the trigger mode, which determines device behaviour if no trigger occurs.
         Args:
-            mode: "AUTO" or "NORM"/"NORMAL"
+            mode: "AUTO" or "NORM"/"NORMAL" (case-insensitive)
         Returns:
             True if trigger mode is invalid
         """
@@ -264,11 +272,31 @@ class DriverRTM3004(DriverMXO4X):
         self.__write_to_dev(f"TRIG:A:MODE {mode}")
         return False
     
-    def trig_source(self, source: str) -> bool:
-        sources = [f"CH{i}" for i in range(1,5)] + [f"D{i}" for i in range(16)] + ["SBUS1", "SBUS2", "EXT", "LINE"]
-        if source not in sources:
+    def trig_b_mode(self, mode: str) -> bool:
+        """Set either a time or an event delay after an A trigger before recognising a B trigger
+        Args:
+            mode: "DELAY" or "EVENT" (case-insensitive)
+        Returns:
+            True if trigger mode is invalid
+        """
+        if mode := mode.upper() not in ("DELAY", "EVENT"):
             return True
-        self.__write_to_dev(f"TRIG:A:SOUR {source}")
+        self.__write_to_dev(f"TRIG:B:MODE {mode}")
+        return False
+    
+    def trig_source(self, source: str, event: int = 1) -> bool:
+        """Set the trigger source of either the A or B trigger
+        Args:
+            source: "CH1" to "CH4", "D0" to "D15" for both triggers.
+                A-trigger additionally allows "SBUS1", "SBUS2", "EXT" and "LINE".
+            event: 1 = A-trigger, 2 = B-trigger
+        Returns:
+            True if trigger source is invalid for the given event or event is invalid
+        """
+        sources = [f"CH{i}" for i in range(1,5)] + [f"D{i}" for i in range(16)] + ["SBUS1", "SBUS2", "EXT", "LINE"]
+        if event not in (1,2) or (event == 1 and source not in sources) or (event == 2 and source not in sources[:-4]):
+            return True
+        self.__write_to_dev(f"TRIG:{'A' if event == 1 else 'B'}:SOUR {source}")
         return False
     
     def trig_delay(self, delay: float) -> None:
@@ -297,17 +325,19 @@ class DriverRTM3004(DriverMXO4X):
             None
         """
         self.__write_to_dev("TRIG:A:FIND")
-
-    def trig_edge_noisereject(self, state: bool) -> None:
-        """Set an additional 100 MHz lowpass filter in the trigger path
+    
+    def trig_edge_lowpass(self, large: bool, small: bool) -> None:
+        """Set an additional lowpass filter in the trigger path
         Args:
-            state: True for noise rejection, False to disable
+            large: True for a 100 MHz lowpass filter, False to disable
+            small: True for a 5 KHz lowpass filter, False to disable
         Returns:
             None
         """
-        self.__write_to_dev(f"TRIG:A:EDGE:FILT:NREJ {int(state)}")
+        self.__write_to_dev(f"TRIG:A:EDGE:FILT:NREJ {int(large)}")
+        self.__write_to_dev(f"TRIG:A:EDGE:FILT:HFR {int(small)}")
     
-    def trig_hysteresis(self, level: str | int) -> bool:
+    def trig_edge_noisereject(self, level: str | int) -> bool:
         """Sets a hysteresis range around the trigger level to avoid unwanted triggers by noise oscillations.
         The value of each hysteresis level depends on the vertical scale.
         Args:
@@ -347,7 +377,54 @@ class DriverRTM3004(DriverMXO4X):
             return True
         self.__write_to_dev(f"TRIG:A:EDGE:COUP {coupling}")
         return False
+
+    def trig_edge_direction(self, direction: Threeway, event: int = 1) -> bool:
+        """Set edge direction for trigger
+        Args:
+            direction: NEGATIVE for falling edge, POSITIVE for rising edge, NEUTRAL for either
+            event: 1 = A-trigger, 2 = B-trigger
+        Returns:
+            True if direction or event is invalid
+        """
+        if direction not in (-1,0,1) or event not in (1,2):
+            return True
+        args = ["NEG", "EITH", "POS"]
+        self.__write_to_dev(f"TRIG:{'A' if event == 1 else 'B'}:EDGE:SLOP {args[direction + 1]}")
+        return False
     
+    def trig_level(self, level: float, channel: int = 1) -> bool:
+        """Set the trigger threshold voltage for edge, width, and timeout trigger
+        Args:
+            level: Depends on vertical scale, unit [V]
+            channel: 1..4 are the corresponding analogue channels, 5 is external trigger input
+        Returns:
+            True if channel is invalid
+        """
+        if channel not in (1,2,3,4,5):
+            return True
+        self.__write_to_dev(f"TRIG:A:LEV{channel} {level}")
+        return False
+
+    def trig_export_source(self, source: str) -> bool:
+        sources = ([f"CH{i}" for i in range(1, 5)]
+            + ["D70", "D158"]
+            + [f"MA{i}" for i in range(1, 6)]
+            + [f"RE{i}" for i in range(1, 5)])
+        if source not in sources:
+            return True
+        self.__write_to_dev(f"EXP:WAV:SOUR {source}")
+        return False
+
+    def trig_export_on_trigger(self, state: bool) -> None:
+        """Decide whether the waveform is saved to a file on a trigger event
+        Args:
+            state: True to export waveform data on trigger, False to do nothing
+        Returns:
+            None
+        """
+        self.__write_to_dev(f"TRIG:EVEN {int(state)}")
+        self.__write_to_dev(f"TRIG:EVEN:WFMS {int(state)}")
+        
     def fra_enter(self):
         """Enter frequency response analysis mode. This is done automatically whenever an FRA function is called.
         Returns:

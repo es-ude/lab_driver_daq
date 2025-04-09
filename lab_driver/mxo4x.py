@@ -710,17 +710,12 @@ class DriverMXO4X:
         output_config = self.__fix_output_config(output_config)
         self.__write_to_dev(f"HCOP:IMM{output_config}:NEXT")
 
-    def trig_event_mode(self, mode: str) -> bool:
+    def trig_event_mode(self, sequence: bool) -> None:
         """Select whether to trigger on a single event or a sequence of events
         Args:
-            mode: "SINGLE" or "SEQUENCE" (case-insensitive)
-        Returns:
-            True when mode is invalid
+            sequence: True to enable trigger on a sequence of events, False for a single event
         """
-        if (mode := mode.upper()) not in ("SINGLE", "SEQUENCE"):
-            return True
-        self.__write_to_dev(f"TRIG:MEV:MODE {mode}")
-        return False
+        self.__write_to_dev(f"TRIG:MEV:MODE {'SEQUENCE' if sequence else 'SINGLE'}")
 
     def trig_source(self, source: str, event: int = 1) -> bool:
         """Select the source of the trigger signal. Sequence trigger mode only allows analog sources.
