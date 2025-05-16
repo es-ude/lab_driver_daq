@@ -1,5 +1,5 @@
-import time
 from time import sleep, strftime
+from logging import getLogger
 import pyvisa
 from scan_instruments import scan_instruments
 
@@ -15,7 +15,7 @@ class DriverNGUX01:
     _fastlog_finish_timestamp: int = 0
 
     def __init__(self):
-        pass
+        self._logger = getLogger(__name__)
 
     def __write_to_dev(self, order: str) -> None:
         self.SerialDevice.write(order)

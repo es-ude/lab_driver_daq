@@ -1,6 +1,7 @@
 import numpy as np
 from time import sleep
 import pyvisa
+from logging import getLogger
 from scan_instruments import scan_instruments
 
 
@@ -8,13 +9,12 @@ class DriverHMP40X0:
     SerialDevice: pyvisa.Resource
     _device_name_chck = "HMP"
 
-    def __init__(self, num_ch=4) -> None:
+    def __init__(self, num_ch: int=4) -> None:
         """Class for Remote Controlling the Power Supply R&S HMP40X0 via USB
-        Args:
-            num_ch:     Number of available device channels (HMP4030 = 3, HMP4040 = 4)
-        Return:
-             None
+        :param num_ch:  Number of available device channels (HMP4030 = 3, HMP4040 = 4)
+        :return:        None
         """
+        self._logger = getLogger(__name__)
         self.__NoChannels = num_ch
         self.SerialActive = False
         self.ChannelUsed = [False, False, False, False]

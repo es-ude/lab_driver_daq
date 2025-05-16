@@ -1,4 +1,5 @@
 from time import sleep, strftime
+from logging import getLogger
 import pyvisa
 import platform
 from RsInstrument import RsInstrument
@@ -21,7 +22,6 @@ HIGH: Threeway = 1
 
 
 class DriverMXO4X:
-    """Class for handling the Rohde and Schwarz Mixed-Signal Oscilloscope MXO44 in Python"""
     SerialDevice: pyvisa.Resource | RsInstrument
     SerialActive = False
     _device_name_chck = "MXO"
@@ -46,6 +46,8 @@ class DriverMXO4X:
                   src_specmax, src_specmin, src_specnorm, src_specaver)
 
     def __init__(self):
+        """Class for handling the Rohde and Schwarz Mixed-Signal Oscilloscope MXO44 in Python"""
+        self._logger = getLogger(__name__)
         self._visa_lib = "/usr/lib/librsvisa.so@ivi" if platform.system() == "Linux" else ""
 
     def __write_to_dev(self, order: str) -> None:

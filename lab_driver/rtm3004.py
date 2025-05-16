@@ -1,9 +1,11 @@
 from requests import options
-
+from logging import getLogger
 from mxo4x import *
+
 
 class DriverRTM3004(DriverMXO4X):
     _device_name_chck = "RTM"
+
 
     def __write_to_dev(self, order: str) -> None:
         """Wrapper for executing commands on device
