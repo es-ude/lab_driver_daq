@@ -16,7 +16,7 @@ packages = ["lab_driver"]
 
 [project]
 name = "driver-meas-dev"
-version = "0.1.0"
+version = "0.2.0"
 description = "Python API for handling Measurement Devices for Enabling automated Testing"
 readme = "README.md"
 license =  {file = "LICENSE"}
