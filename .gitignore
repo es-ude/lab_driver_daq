@@ -2,4 +2,4 @@
 **/.venv
 **/venv
 **/dist
-uv.lock
+**/*.lock

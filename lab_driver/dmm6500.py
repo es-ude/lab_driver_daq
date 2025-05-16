@@ -1,33 +1,17 @@
 from time import sleep
+from logging import getLogger
 import pyvisa
-
-
-def scan_instruments(do_print=True) -> list:
-    """Scanning the VISA bus for instruments"""
-    rm = pyvisa.ResourceManager()
-    obj_inst = rm.list_resources()
-
-    out_dev_adr = list()
-    for idx, inst_name in enumerate(obj_inst):
-        out_dev_adr.append(inst_name)
-        # --- Printing the stuff
-        if do_print:
-            if idx == 0:
-                print(f"\nUsing VISA driver: {rm}")
-                print("Available devices")
-                print("--------------------------------------")
-            print(f"{idx}: {inst_name}")
-    return out_dev_adr
+from lab_driver.scan_instruments import scan_instruments
 
 
 class DriverDMM6500:
-    """Class for handling the Keithley Digital Multimeter 6500 in Python"""
     SerialDevice: pyvisa.Resource
     SerialActive = False
     _device_name_chck = "DMM6500"
 
     def __init__(self):
-        pass
+        """Class for handling the Keithley Digital Multimeter 6500 in Python"""
+        self._logger = getLogger(__name__)
 
     def __write_to_dev(self, order: str) -> None:
         self.SerialDevice.write(order)
@@ -36,24 +20,28 @@ class DriverDMM6500:
         text_out = self.SerialDevice.query(order)
         return text_out.strip()
 
-    def __init_dev(self, do_reset=True, do_beep=True):
-        """"""
+    def __init_dev(self, do_reset: bool=True, do_beep: bool=True) -> None:
+        """Function for initialisation of DAQ device
+        :param do_reset:    Reset the DAQ device
+        :param do_beep:     Do a beep on DAQ device after init done
+        :return: None
+        """
         self.__write_to_dev("*LANG SCPI")
         if self.SerialActive:
             if do_reset:
                 self.do_reset()
             if do_beep:
                 self.do_beep()
-            print(f"Right device is selected with: {self.get_id(False)}")
+            self._logger.debug(f"Right device is selected with: {self.get_id()}")
         else:
-            print("Not right selected device. Please check!")
+            self._logger.debug("Not right selected device. Please check!")
 
     def __do_check_idn(self) -> None:
         """Checking the IDN"""
-        id_back = self.get_id(False)
+        id_back = self.get_id()
         self.SerialActive = self._device_name_chck in id_back
 
-    def serial_start_known_target(self, resource_name: str, do_reset=False) -> None:
+    def serial_start_known_target(self, resource_name: str, do_reset: bool=False) -> None:
         """Open the serial connection to device directly"""
         rm = pyvisa.ResourceManager()
         self.SerialDevice = rm.open_resource(resource_name)
@@ -61,9 +49,13 @@ class DriverDMM6500:
         self.__do_check_idn()
         self.__init_dev(do_reset)
 
-    def serial_start(self, do_reset=False, do_beep=True) -> None:
-        """Open the serial connection to device"""
-        list_dev = scan_instruments(do_print=False)
+    def serial_start(self, do_reset: bool=False, do_beep: bool=True) -> None:
+        """Open the serial connection to device
+        :param do_reset:    Reset the DAQ device
+        :param do_beep:     Do a beep on DAQ device after init done
+        :return:            None
+        """
+        list_dev = scan_instruments()
         rm = pyvisa.ResourceManager()
 
         # --- Checking if device address is right
@@ -83,17 +75,16 @@ class DriverDMM6500:
         self.SerialDevice.close()
         self.SerialActive = False
 
-    def get_id(self, do_print=True) -> str:
+    def get_id(self) -> str:
         """Getting the device ID"""
         id = self.__read_from_dev("*IDN?")
-        if do_print:
-            print(id)
+        self._logger.debug(f"Device ID: {id}")
         return id
 
     def do_reset(self) -> None:
         """Reset the device"""
         if not self.SerialActive:
-            print("... not done due to wrong device")
+            self._logger.debug("... RST not done due to wrong device")
         else:
             self.__write_to_dev("*RST")
             sleep(1)
@@ -120,7 +111,7 @@ class DriverDMM6500:
     def read_value(self) -> float:
         """Reading value from display"""
         if not self.SerialActive:
-            print("... not done due to wrong device")
+            self._logger.debug("... reading not done due to wrong device")
         else:
             return float(self.__read_from_dev(":READ?"))
 
@@ -191,7 +182,7 @@ class DriverDMM6500:
         if polarity in available_ranges and function in available_ranges[polarity]:
             ranges = available_ranges[polarity][function]
         else:
-            print("Changing measurement range failed. Check polarity. Check function.")
+            self._logger.info("Changing measurement range failed. Check polarity. Check function.")
             return True
 
         for x in ranges:
@@ -199,7 +190,7 @@ class DriverDMM6500:
                 self.__write_to_dev(f":SENS:{function}:{polarity}:RANG {x}")
                 return False
 
-        print("Changing measurement range failed. Check range selection.")
+        self._logger.info("Changing measurement range failed. Check range selection.")
         return True
 
     def set_4wire_offset_compensation(self, compensation: bool | str) -> bool:
@@ -214,7 +205,7 @@ class DriverDMM6500:
         elif type(compensation) == bool:
             self.__write_to_dev(f":SENS:FRES:OCOM {int(compensation)}")
         else:
-            print("Setting 4-wire resistance offset compensation failed. Check argument.")
+            self._logger.debug("Setting 4-wire resistance offset compensation failed. Check argument.")
             return True
         return False
 
@@ -232,7 +223,7 @@ class DriverDMM6500:
         """
         if range == "AUTO":
             if type not in (2,4):
-                print(f"Only 2-wire and 4-wire resistance types are supported. You selected {type}.")
+                self._logger.info(f"Only 2-wire and 4-wire resistance types are supported. You selected {type}.")
                 return True
             self.__write_to_dev(":SENS:#RES:RANG:AUTO ON".replace('#', 'F' if type == 4 else ''))
             return False
@@ -241,10 +232,10 @@ class DriverDMM6500:
             from math import log10
             power = log10(range)
             if power != int(power):
-                print("Range argument must be power of 10.")
+                self._logger.info("Range argument must be power of 10.")
                 return True
         except:
-            print(f"Mathematical error during computation of log10 of range argument: {range}.")
+            self._logger.info(f"Mathematical error during computation of log10 of range argument: {range}.")
             return True
 
         if type == 2:
@@ -259,9 +250,9 @@ class DriverDMM6500:
                 self.__write_to_dev(f":SENS:FRES:RANG {range}")
                 return False
         else:
-            print(f"Only 2-wire and 4-wire resistance types are supported. You selected {type}.")
+            self._logger.info(f"Only 2-wire and 4-wire resistance types are supported. You selected {type}.")
             return True
-        print(f"Range argument is out of supported range: {range}")
+        self._logger.info(f"Range argument is out of supported range: {range}")
         return True
 
     def set_2wire_resistance_range(self, range: int | str) -> bool:
@@ -314,12 +305,8 @@ class DriverDMM6500:
         else:
             return self.__set_volt_curr_range("CURR", polarity, range)
 
-    def test(self):
-        self.__write_to_dev(":SENS:FRES:OCOM OFF")
-        print(self.__read_from_dev(":SENS:FRES:OCOM?"))
 
-
-def main():
+if __name__ == "__main__":
     print("Testing device Keithley DMM6500")
 
     # scan_instruments()
@@ -328,14 +315,10 @@ def main():
     dev.do_reset()
     dev.set_measurement_mode("CURR")
     dev.set_current_range(0.1)
-    #dev.test()
+    # dev.test()
 
     for idx in range(0, 5):
         print(dev.read_value())
         sleep(0.5)
 
     dev.serial_close()
-
-
-if __name__ == "__main__":
-    main()
