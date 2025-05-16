@@ -1,7 +1,7 @@
 from time import sleep
 from logging import getLogger
 import pyvisa
-from lab_driver.scan_instruments import scan_instruments
+from .scan_instruments import scan_instruments
 
 
 class DriverDMM6500:

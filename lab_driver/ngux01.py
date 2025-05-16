@@ -1,7 +1,7 @@
 from time import sleep, strftime
 from logging import getLogger
 import pyvisa
-from scan_instruments import scan_instruments
+from .scan_instruments import scan_instruments
 
 
 class DriverNGUX01:

@@ -2,7 +2,7 @@ import numpy as np
 from time import sleep
 import pyvisa
 from logging import getLogger
-from scan_instruments import scan_instruments
+from .scan_instruments import scan_instruments
 
 
 class DriverHMP40X0:

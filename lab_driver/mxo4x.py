@@ -3,7 +3,7 @@ from logging import getLogger
 import pyvisa
 import platform
 from RsInstrument import RsInstrument
-from scan_instruments import scan_instruments
+from .scan_instruments import scan_instruments
 
 mHz = .001
 KHz = 1000
