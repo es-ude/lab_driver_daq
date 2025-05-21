@@ -24,4 +24,6 @@ def scan_instruments() -> list:
     for idx, inst_name in enumerate(obj_inst):
         out_dev_adr.append(inst_name)
         logger.debug(f"{idx}: {inst_name}")
+    rm.close()
+    assert out_dev_adr != [], "No instruments found!"
     return out_dev_adr

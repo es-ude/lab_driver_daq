@@ -21,7 +21,18 @@ uv sync
 3. Done
 
 ### DMM6500 how-to on Linux:
-1. Don't yet
+You need to do a first time setup
+1. Check the USB connection `lsusb`
+2. This file may be owned by root, so if that's the case:
+`sudo chown <user> /sys/bus/usb/drivers/usbtmc/new_id`
+3. Ensure usbtmc kernel module is loaded `sudo modprobe usbtmc`, then `ls /dev/usbtmc*`
+and check if the device is listed
+4. Create a udev rule to allow access to the device
+`echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="05e6", ATTR{idProduct}=="6500", MODE="0666"' | sudo tee /etc/udev/rules.d/99-keithley.rules`
+5. Reload the udev rules with `sudo udevadm control --reload-rules` and then `sudo udevadm trigger`
+6. Restart the device
+7. Crucial: *Open* pyvisa ResourceManager with @py backend instead of IVI-VISA, but let IVI
+*scan* for devices beforehand!
 
 ### NGU411 FastLog notes:
 FastLog dumps a binary file of its measurements on the USB stick. This binary

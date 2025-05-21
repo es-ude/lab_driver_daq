@@ -1,7 +1,7 @@
-from time import sleep, strftime
+from time import sleep, strftime, time_ns
 from logging import getLogger
 import pyvisa
-from .scan_instruments import scan_instruments
+from scan_instruments import scan_instruments
 
 
 class DriverNGUX01:
@@ -70,8 +70,8 @@ class DriverNGUX01:
 
     def serial_start(self, do_reset=False) -> None:
         """Open the serial connection to device"""
-        list_dev = scan_instruments(do_print=False)
-        rm = pyvisa.ResourceManager()
+        list_dev = scan_instruments()
+        rm = pyvisa.ResourceManager("/usr/lib/librsvisa.so@ivi")
 
         for inst_name in list_dev:
             self.SerialDevice = rm.open_resource(inst_name)
@@ -400,7 +400,7 @@ class DriverNGUX01:
         if duration is not None:
             self.set_fastlog_duration(duration)
         self.__write_to_dev("FLOG 1")
-        self._fastlog_finish_timestamp = time.time_ns() + self.get_fastlog_duration() * 10**9
+        self._fastlog_finish_timestamp = time_ns() + self.get_fastlog_duration() * 10**9
         return False
 
     def abort_fastlog(self) -> None:
@@ -411,7 +411,7 @@ class DriverNGUX01:
             None
         """
         self.__write_to_dev("FLOG 0")
-        self._fastlog_finish_timestamp = time.time_ns()
+        self._fastlog_finish_timestamp = time_ns()
     
     def is_usb_connected(self) -> bool:
         """EVENT - Check for USB device connection
@@ -443,7 +443,7 @@ class DriverNGUX01:
         Returns:
             True if FastLog measurement is running, False otherwise
         """
-        return time.time_ns() <= self._fastlog_finish_timestamp and self.is_usb_connected()
+        return time_ns() <= self._fastlog_finish_timestamp and self.is_usb_connected()
     
     def is_fastlog_finished(self) -> bool:
         """EVENT - Convenience function for negation of is_fastlog_running, to avoid lambda expression

@@ -1,7 +1,7 @@
 from time import sleep
 from logging import getLogger
 import pyvisa
-from .scan_instruments import scan_instruments
+from scan_instruments import scan_instruments
 
 
 class DriverDMM6500:
@@ -56,7 +56,7 @@ class DriverDMM6500:
         :return:            None
         """
         list_dev = scan_instruments()
-        rm = pyvisa.ResourceManager()
+        rm = pyvisa.ResourceManager("@py")
 
         # --- Checking if device address is right
         for inst_name in list_dev:
