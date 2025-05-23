@@ -1,7 +1,8 @@
 import numpy as np
-
 from time import sleep
-from lab_driver.hmp40x0 import DriverHMP40X0, scan_instruments
+from lab_driver import scan_instruments
+from lab_driver import DriverHMP40X0
+
 
 if __name__ == '__main__':
     scan_instruments()

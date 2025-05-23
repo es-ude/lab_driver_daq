@@ -1,4 +1,5 @@
-from lab_driver.ngux01 import *
+from lab_driver import DriverNGUX01
+
 
 if __name__ == '__main__':
     # Try connecting to the device and reset it

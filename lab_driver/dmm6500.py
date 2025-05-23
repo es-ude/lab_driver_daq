@@ -1,7 +1,7 @@
 from time import sleep
 from logging import getLogger
 import pyvisa
-from scan_instruments import scan_instruments
+from lab_driver.scan_instruments import scan_instruments
 
 
 class DriverDMM6500:
@@ -304,21 +304,3 @@ class DriverDMM6500:
             return False
         else:
             return self.__set_volt_curr_range("CURR", polarity, range)
-
-
-if __name__ == "__main__":
-    print("Testing device Keithley DMM6500")
-
-    # scan_instruments()
-    dev = DriverDMM6500()
-    dev.serial_start(do_beep=False)
-    dev.do_reset()
-    dev.set_measurement_mode("CURR")
-    dev.set_current_range(0.1)
-    # dev.test()
-
-    for idx in range(0, 5):
-        print(dev.read_value())
-        sleep(0.5)
-
-    dev.serial_close()

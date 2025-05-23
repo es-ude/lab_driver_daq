@@ -1,5 +1,6 @@
-from lab_driver.mxo4x import *
 from time import sleep
+from lab_driver import DriverMXO4X, KHz, MHz
+
 
 if __name__ == '__main__':
     # Try connecting to the device, reset it and display the waveform GUI with a sample text

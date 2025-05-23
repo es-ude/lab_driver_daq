@@ -1,7 +1,7 @@
 from time import sleep, strftime, time_ns
 from logging import getLogger
 import pyvisa
-from scan_instruments import scan_instruments
+from lab_driver.scan_instruments import scan_instruments
 
 
 class DriverNGUX01:
@@ -472,18 +472,3 @@ class DriverNGUX01:
             return self.__read_from_dev(cmd)
         else:
             self.__write_to_dev(cmd)
-
-
-if __name__ == "__main__":
-    scan_instruments()
-
-    dev = DriverNGUX01()
-    dev.serial_start()
-    dev.set_fastlog_sample_rate(.1)
-    dev.set_fastlog_duration(3)
-    print("Searching for USB devices...")
-    dev.event_handler(dev.is_usb_connected, dev.do_fastlog)
-    print("Found USB device. Running FastLog measurement...")
-    dev.event_handler(dev.is_fastlog_finished, lambda: print("Done!"))
-    dev.serial_close()
-

@@ -443,7 +443,7 @@ class DriverRTM3004(DriverMXO4X):
         self.__write_to_dev("SPEC OFF")
         self.sync()
     
-    def fra_freq_start(self, freq: float) -> None:
+    def fra_freq_start(self, freq: float) -> bool:
         """Set the start frequency of the sweep.
         NOTICE: This function is broken and should not be relied upon.
         Args:
@@ -455,7 +455,7 @@ class DriverRTM3004(DriverMXO4X):
         self.__write_to_dev(f"SPEC:FREQ:STAR {freq}")
         return False
     
-    def fra_freq_stop(self, freq: float) -> None:
+    def fra_freq_stop(self, freq: float) -> bool:
         """Set the stop frequency of the sweep
         NOTICE: This function is broken and should not be relied upon.
         Args:
@@ -479,16 +479,3 @@ class DriverRTM3004(DriverMXO4X):
         self.fra_enter()
         self.__write_to_dev(f"SPEC:SOUR CH{channel}")
         return False
-    
-
-if __name__ == "__main__":
-    d = DriverRTM3004()
-    d.serial_start()
-    d.get_id()
-    d.do_reset()
-    d.fra_enter()
-    sleep(1)
-    d.fra_freq_start(10*MHz)
-    d.fra_freq_stop(16*MHz)
-    d.live_command_mode()
-    d.serial_close()

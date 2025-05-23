@@ -2,7 +2,7 @@ import numpy as np
 from time import sleep
 import pyvisa
 from logging import getLogger
-from .scan_instruments import scan_instruments
+from lab_driver.scan_instruments import scan_instruments
 
 
 class DriverHMP40X0:
@@ -322,11 +322,3 @@ class ChannelInfoHMP40X0:
 
     def set_arbitrary_stop(self) -> str:
         return "ARB:STOP " + str(self.ChannelNumber)
-
-
-if __name__ == "__main__":
-    inst_dev = DriverHMP40X0()
-    inst_dev.serial_open()
-    inst_dev.get_id()
-    inst_dev.do_beep()
-    inst_dev.serial_close()

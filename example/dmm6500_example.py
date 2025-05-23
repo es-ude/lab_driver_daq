@@ -1,5 +1,6 @@
-from lab_driver.dmm6500 import *
 from time import sleep
+from lab_driver import DriverDMM6500
+
 
 if __name__ == "__main__":
     # Try connecting to device and reset it

@@ -3,22 +3,8 @@ from logging import getLogger
 import pyvisa
 import platform
 from RsInstrument import RsInstrument
-from .scan_instruments import scan_instruments
-
-mHz = .001
-KHz = 1000
-MHz = 1000000
-GHz = 1000000000
-
-# Threeway type is like a boolean, but with 3 states -1,0,1
-Threeway = int
-NEGATIVE: Threeway = -1
-NEUTRAL: Threeway = 0
-POSITIVE: Threeway = 1
-LOW: Threeway = -1
-OFF: Threeway = 0
-HIGH: Threeway = 1
-
+from lab_driver.scan_instruments import scan_instruments
+from lab_driver.units import *
 
 
 class DriverMXO4X:
@@ -1264,26 +1250,3 @@ class DriverMXO4X:
             return self.__read_from_dev(cmd)
         else:
             self.__write_to_dev(cmd)
-
-
-if __name__ == "__main__":
-    scan_instruments()
-
-    #rm = pyvisa.ResourceManager("/usr/lib/librsvisa.so@ivi")
-    #mx = rm.open_resource(rm.list_resources()[0])
-    #print("CONNECTED WITH -", mx.query("*IDN?"))
-
-    d = DriverMXO4X()
-    #d.serial_open_known_target("USB0::0x0AAD::0x01D7::113613::INSTR")
-    #                          "USB0::0x0AAD::0x01D7::1335.8794k04-113613::INSTR"
-    #                          "USB0::0x0AAD::0x0197::1335.5050k04-201451::INSTR"
-    d.serial_start()
-    d.get_id()
-
-    #d.do_reset()
-    d.set_display_activation(True)
-    #d.set_static_display_text("Hello World!")
-
-    d.live_command_mode()
-
-    d.serial_close()

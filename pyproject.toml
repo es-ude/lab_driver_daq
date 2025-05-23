@@ -15,8 +15,8 @@ packages = ["lab_driver"]
 
 
 [project]
-name = "driver-meas-dev"
-version = "0.2.0"
+name = "lab_driver_daq"
+version = "0.2.2"
 description = "Python API for handling Measurement Devices for Enabling automated Testing"
 readme = "README.md"
 license =  {file = "LICENSE"}
