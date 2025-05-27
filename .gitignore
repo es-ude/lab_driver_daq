@@ -1,5 +1,7 @@
 .idea
+**/__pycache__
 **/.venv
 **/venv
 **/dist
 **/*.lock
+**/.log

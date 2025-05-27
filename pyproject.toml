@@ -32,7 +32,9 @@ dependencies = [
     "pyserial>=3.5",
     "pyvisa>=1.14.1",
     "pyvisa-py>=0.7.2",
+    "pyyaml>=6.0.2",
     "requests>=2.32.3",
     "rsinstrument>=1.90.0",
+    "tqdm>=4.67.1",
     "zeroconf>=0.141.0",
 ]
