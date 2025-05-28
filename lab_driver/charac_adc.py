@@ -11,22 +11,26 @@ from lab_driver.yaml_handler import YamlConfigHandler
 
 
 @dataclass
-class SettingsDAC:
-    """Class with settings for testing the DUT of Digital-Analog-Converter (DAC)
+class SettingsADC:
+    """Class with settings for testing the DUT of Analog-Digital-Converter (ADC)
     Attributes:
-        dac_reso:   Integer with bit resolution of DAC
-        dac_chnl:   List with DAC channel IDs to test (like: [idx for idx in range (16)])
-        dac_rang:   List with [min, max] digital ranges for testing the N-bit DAC (like: [0, 65535])
-        daq_ovr:    Integer number for oversampling of DAQ system
+        adc_voltage_min:    Floating with minimal ADC voltage
+        adc_voltage_max:    Floating with maximal ADC voltage
+        adc_reso:   Integer with bit resolution of ADC
+        adc_chnl:   List with ADC channel IDs to test (like: [idx for idx in range (16)])
+        adc_rang:   List with [min, max] analog ranges for testing the N-bit ADC (like: [0, 65535])
+        adc_ovr:    Integer number for oversampling of DAQ system
         num_rpt:    Integer of completes cycles to run DAQ
-        num_steps:  Integer of intermediate steps in ramping
+        delta_steps:  Float of intermediate steps in ramping
     """
-    dac_reso: int
-    dac_chnl: list
-    dac_rang: list
-    daq_ovr: int
+    adc_voltage_min: float
+    adc_voltage_max: float
+    adc_reso: int
+    adc_chnl: list
+    adc_rang: list
+    adc_ovr: int
     num_rpt: int
-    num_steps: int
+    delta_steps: float
 
     @staticmethod
     def get_date_string() -> str:
@@ -34,41 +38,47 @@ class SettingsDAC:
         return datetime.now().strftime("%Y%m%d-%H%M%S")
 
     def get_cycle_stimuli_input(self) -> np.ndarray:
-        num_points = int((self.dac_rang[1] - self.dac_rang[0] + 1) / self.num_steps)
-        return np.linspace(start=self.dac_rang[0], stop=self.dac_rang[1], num=num_points, endpoint=True, dtype=int)
+        num_points = (self.adc_rang[1] - self.adc_rang[0]) / self.delta_steps
+        return np.linspace(start=self.adc_rang[0], stop=self.adc_rang[1], num=num_points, endpoint=True, dtype=float)
 
     def get_cycle_empty_array(self) -> np.ndarray:
         """Function for generating an empty numpy array with right size"""
-        return np.zeros(shape=(self.num_rpt, self.get_cycle_stimuli_input().size, self.daq_ovr), dtype=float)
+        return np.zeros(shape=(self.num_rpt, self.get_cycle_stimuli_input().size), dtype=float)
 
 
-DefaultSettingsDAC = SettingsDAC(
-    dac_reso=16,
-    dac_chnl=[idx for idx in range(16)],
-    dac_rang=[0, 2**16-1],
-    daq_ovr=1,
+DefaultSettingsADC = SettingsADC(
+    adc_voltage_min=0.0,
+    adc_voltage_max=5.0,
+    adc_reso=16,
+    adc_chnl=[idx for idx in range(16)],
+    adc_rang=[0.0, 5.0],
+    adc_ovr=1,
     num_rpt=1,
-    num_steps=1,
+    delta_steps=0.05,
 )
 
 
-class CharacterizationDAC:
+class CharacterizationADC:
     _sleep_set_sec: float = 0.01
-    settings: SettingsDAC
+    settings: SettingsADC
 
     def __init__(self) -> None:
         self._logger = getLogger(__name__)
         self.settings = YamlConfigHandler(
-            yaml_template=DefaultSettingsDAC,
+            yaml_template=DefaultSettingsADC,
             path2yaml='config',
-            yaml_name='Config_TestDAC'
-        ).get_class(SettingsDAC)
+            yaml_name='Config_TestADC'
+        ).get_class(SettingsADC)
         self.check_settings_error()
 
     def check_settings_error(self) -> None:
         """Function for checking for input errors"""
-        assert self.settings.daq_ovr > 0, "Variable: daq_ovr - Must be greater than 1"
-        assert len(self.settings.dac_rang) == 2, "Variable: dac_rang - Length must be 2"
+        assert self.settings.adc_ovr > 0, "Variable: adc_ovr - Must be greater than 1"
+        assert len(self.settings.adc_rang) == 2, "Variable: adc_rang - Length must be 2"
+
+        assert self.settings.adc_rang[0] < self.settings.adc_rang[1], "Variable: adc_rang[0] must be smaller than adc_rang[1]"
+        assert self.settings.adc_voltage_min <= self.settings.adc_rang[0] and self.settings.adc_voltage_min < self.settings.adc_rang[1], "Variable: adc_voltage_min must be smaller than adc_rang"
+        assert self.settings.adc_voltage_max > self.settings.adc_rang[0] and self.settings.adc_voltage_max >= self.settings.adc_rang[1], "Variable: adc_voltage_max must be greater than adc_rang"
 
     @staticmethod
     def bypass_mock_beep() -> None:
@@ -111,8 +121,9 @@ class CharacterizationDAC:
         stimuli = self.settings.get_cycle_stimuli_input()
 
         results = {'stim': stimuli}
-        for chnl in self.settings.dac_chnl:
-            results_ch = self.settings.get_cycle_empty_array()
+        for chnl in self.settings.adc_chnl:
+            results_ch_val = self.settings.get_cycle_empty_array()
+            results_ch_std = self.settings.get_cycle_empty_array()
             func_mux(chnl)
             self._logger.debug(f"Prepared DAC channel: {chnl}")
 
@@ -120,12 +131,13 @@ class CharacterizationDAC:
                 for val_idx, data in enumerate(tqdm(stimuli, ncols=100, desc=f"Process CH{chnl} @ repetition {1 + rpt_idx}/{self.settings.num_rpt}")):
                     func_dac(chnl, data)
                     sleep(self._sleep_set_sec)
-                    for ovr_idx in range(self.settings.daq_ovr):
-                        results_ch[rpt_idx, val_idx, ovr_idx] = func_daq()
+                    read_volt = np.array([func_daq() for _ in range(self.settings.adc_ovr)])
+                    results_ch_val[rpt_idx, val_idx] = np.mean(read_volt)
+                    results_ch_std[rpt_idx, val_idx] = np.std(read_volt)
                 self._logger.debug(f"Sweep DAC channel: {chnl}")
 
                 func_beep()
-            results.update({f"ch{chnl:02d}": results_ch})
+            results.update({f"ch{chnl:02d}": {'val': results_ch_val, 'std': results_ch_std}})
         return results
 
     def save_results(self, data: dict, folder_name: str) -> None:

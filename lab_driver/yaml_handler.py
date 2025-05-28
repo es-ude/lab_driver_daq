@@ -5,12 +5,12 @@ from os import makedirs, getcwd
 from os.path import join, exists, abspath
 
 
-def get_path_project_start(new_folder: str = '') -> str:
+def get_path_project_start(folder_reference: str='lab_driver', new_folder: str = '') -> str:
     """Function for getting the path to find the project folder structure.
-    :param new_folder:  New folder path (optional)
-    :return:            String of absolute path to start the project structure
+    :param folder_reference:    String with folder reference to start
+    :param new_folder:          New folder path (optional)
+    :return:                    String of absolute path to start the project structure
     """
-    folder_reference = 'lab_driver'
     folder_start = join(getcwd().split(folder_reference)[0], folder_reference) if folder_reference in getcwd() else getcwd()
     return abspath(join(folder_start, new_folder))
 
@@ -25,15 +25,16 @@ class YamlConfigHandler:
         """Getting the path to the desired YAML file"""
         return join(self.__path2yaml_folder, f"{self.__yaml_name}.yaml")
 
-    def __init__(self, yaml_template: Any | dict, path2yaml='config', yaml_name='Config_Train'):
+    def __init__(self, yaml_template: Any | dict, path2yaml='config', yaml_name='Config_Train', folder_reference: str='lab_driver'):
         """Creating a class for handling YAML files
         Args:
             yaml_template:      Dummy dataclass with entries or dictionary (is only generated if YAML not exist)
             path2yaml:          String with path to the folder which has the YAML file [Default: '']
             yaml_name:          String with name of the YAML file [Default: 'Config_Train']
+            folder_reference:   String with folder reference to start
         """
         self.__logger = logging.getLogger(__name__)
-        self.__path2yaml_folder = join(get_path_project_start(), path2yaml)
+        self.__path2yaml_folder = join(get_path_project_start(folder_reference=folder_reference), path2yaml)
         self.__yaml_name = self.__remove_ending_from_filename(yaml_name)
 
         makedirs(self.__path2yaml_folder, exist_ok=True)

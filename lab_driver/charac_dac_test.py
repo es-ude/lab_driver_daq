@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from copy import deepcopy
-from lab_driver.dac_charac import SettingsDAC, CharacterizationDAC
+from lab_driver.charac_dac import SettingsDAC, CharacterizationDAC
 
 
 settings = SettingsDAC(

@@ -12,6 +12,7 @@ namespaces = false
 
 [tool.hatch.build.targets.wheel]
 packages = ["lab_driver"]
+exclude = ['*_test.py']
 
 
 [project]
