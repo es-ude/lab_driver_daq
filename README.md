@@ -1,4 +1,4 @@
-# driver_meas_devices
+# Driver for DAQ Devices of the IES Lab
 Python Driver for Measurement Devices from the Lab
 
 ## Using the package release in other Repos

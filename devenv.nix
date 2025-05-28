@@ -16,7 +16,7 @@ in {
   languages.nix.enable = true;
   languages.python = {
     enable = true;
-    package = pkgs.python313;
+    package = pkgs.python311;
     uv.enable = true;
     uv.package = unstablePkgs.uv;
     uv.sync.enable = true;

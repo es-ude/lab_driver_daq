@@ -102,6 +102,10 @@ autodoc2_packages = [
     },
 ]
 
+autodoc2_skip_module_regexes = [
+    ".*_test"
+]
+
 autodoc2_render_plugin = "myst"
 autodoc2_hidden_objects = {"inherited", "private"}
 

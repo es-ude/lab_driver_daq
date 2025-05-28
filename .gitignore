@@ -1,4 +1,8 @@
 .idea
+build
+temp_test
+docs/apidocs
+
 **/__pycache__
 **/.venv
 **/venv
