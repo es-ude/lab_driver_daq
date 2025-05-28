@@ -4,4 +4,4 @@
 **/venv
 **/dist
 **/*.lock
-**/.log
+**/*.log

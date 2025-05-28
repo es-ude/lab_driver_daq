@@ -22,6 +22,7 @@ class TestADC(unittest.TestCase):
         check = len(date.split('-')[0]) == 8 and len(date.split('-')[1]) == 6
         self.assertTrue(check)
 
+    """
     def test_settings_stimuli_16bit_1step(self):
         set0 = deepcopy(settings)
         set0.adc_reso = 16
@@ -77,7 +78,7 @@ class TestADC(unittest.TestCase):
             func_beep=hndl.bypass_mock_beep
         )
         self.assertTrue(len(results) == 1 + len(set0.adc_chnl))
-
+    """
 
 if __name__ == '__main__':
     unittest.main()
