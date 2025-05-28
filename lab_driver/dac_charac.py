@@ -12,11 +12,11 @@ from lab_driver.yaml_handler import YamlConfigHandler
 
 @dataclass
 class SettingsDAC:
-    """Class for handling the DAC test
+    """Class with settings for testing the DUT of Digital-Analog-Converter (DAC)
     Attributes:
         dac_reso:   Integer with bit resolution of DAC
         dac_chnl:   List with DAC channel IDs to test (like: [idx for idx in range (16)])
-        dac_rang:   List with [min, max] digital ranges for testing the 16-bit DAC (like: [0, 65535])
+        dac_rang:   List with [min, max] digital ranges for testing the N-bit DAC (like: [0, 65535])
         daq_ovr:    Integer number for oversampling of DAQ system
         num_rpt:    Integer of completes cycles to run DAQ
         num_steps:  Integer of intermediate steps in ramping
@@ -39,7 +39,7 @@ class SettingsDAC:
 
     def get_cycle_empty_array(self) -> np.ndarray:
         """Function for generating an empty numpy array with right size"""
-        return np.zeros(shape=(self.num_rpt, self.get_cycle_stimuli_input().size), dtype=float)
+        return np.zeros(shape=(self.num_rpt, self.get_cycle_stimuli_input().size, self.daq_ovr), dtype=float)
 
 
 DefaultSettingsDAC = SettingsDAC(
@@ -112,8 +112,7 @@ class CharacterizationDAC:
 
         results = {'stim': stimuli}
         for chnl in self.settings.dac_chnl:
-            results_ch_val = self.settings.get_cycle_empty_array()
-            results_ch_std = self.settings.get_cycle_empty_array()
+            results_ch = self.settings.get_cycle_empty_array()
             func_mux(chnl)
             self._logger.debug(f"Prepared DAC channel: {chnl}")
 
@@ -121,13 +120,12 @@ class CharacterizationDAC:
                 for val_idx, data in enumerate(tqdm(stimuli, ncols=100, desc=f"Process CH{chnl} @ repetition {1 + rpt_idx}/{self.settings.num_rpt}")):
                     func_dac(chnl, data)
                     sleep(self._sleep_set_sec)
-                    read_volt = np.array([func_daq() for _ in range(self.settings.daq_ovr)])
-                    results_ch_val[rpt_idx, val_idx] = np.mean(read_volt)
-                    results_ch_std[rpt_idx, val_idx] = np.std(read_volt)
+                    for ovr_idx in range(self.settings.daq_ovr):
+                        results_ch[rpt_idx, val_idx, ovr_idx] = func_daq()
                 self._logger.debug(f"Sweep DAC channel: {chnl}")
 
                 func_beep()
-            results.update({f"ch{chnl:02d}": {'val': results_ch_val, 'std': results_ch_std}})
+            results.update({f"ch{chnl:02d}": results_ch})
         return results
 
     def save_results(self, data: dict, folder_name: str) -> None:
@@ -146,14 +144,3 @@ class CharacterizationDAC:
         )
         self._logger.debug(f"Saved results in folder: {folder_name}")
         self._logger.debug(f"Saved measured with {len(data)} entries")
-
-
-
-
-if __name__ == "__main__":
-    print(scan_instruments())
-    handler = TestHandlerDAC(
-        com_cla='COM7',
-        com_dmm='USB0::0x05E6::0x6500::04622454::INSTR',
-    ).run_transfer_test()
-

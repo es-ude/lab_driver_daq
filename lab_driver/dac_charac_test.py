@@ -55,7 +55,7 @@ class TestDAC(unittest.TestCase):
         set0.num_rpt = 10
 
         result_shape = set0.get_cycle_empty_array().shape
-        check_shape = (set0.num_rpt, int((set0.dac_rang[1] - set0.dac_rang[0] + 1) / set0.num_steps))
+        check_shape = (set0.num_rpt, int((set0.dac_rang[1] - set0.dac_rang[0] + 1) / set0.num_steps), set0.daq_ovr)
         np.testing.assert_equal(result_shape, check_shape)
 
     def test_run_transfer_wo_ovr(self):
