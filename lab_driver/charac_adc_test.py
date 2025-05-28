@@ -67,7 +67,7 @@ class TestADC(unittest.TestCase):
         set0.num_steps = 16
         set0.num_rpt = 2
 
-        hndl = CharacterizationADC()
+        hndl = CharacterizationADC(folder_reference='lab_driver')
         hndl.settings = set0
         hndl.check_settings_error()
         results = hndl.run_test_dac_transfer(

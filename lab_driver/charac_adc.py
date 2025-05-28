@@ -62,12 +62,16 @@ class CharacterizationADC:
     _sleep_set_sec: float = 0.01
     settings: SettingsADC
 
-    def __init__(self) -> None:
+    def __init__(self, folder_reference: str) -> None:
+        """Class for handling the measurement routine for characterising a Digital-Analog-Converter (DAC)
+        :param folder_reference:    String with source folder to find the Main Repo Path
+        """
         self._logger = getLogger(__name__)
         self.settings = YamlConfigHandler(
             yaml_template=DefaultSettingsADC,
             path2yaml='config',
-            yaml_name='Config_TestADC'
+            yaml_name='Config_TestADC',
+            folder_reference=folder_reference,
         ).get_class(SettingsADC)
         self.check_settings_error()
 

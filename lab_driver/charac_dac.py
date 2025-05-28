@@ -56,15 +56,17 @@ class CharacterizationDAC(CharacterizationCommon):
     _sleep_set_sec: float = 0.01
     settings: SettingsDAC
 
-    def __init__(self) -> None:
-        """Class for handling the measurement routine for characterising a Digital-Analog-Converter (DAC)"""
+    def __init__(self, folder_reference: str) -> None:
+        """Class for handling the measurement routine for characterising a Digital-Analog-Converter (DAC)
+        :param folder_reference:    String with source folder to find the Main Repo Path
+        """
         super().__init__()
         self._logger = getLogger(__name__)
         self.settings = YamlConfigHandler(
             yaml_template=DefaultSettingsDAC,
             path2yaml='config',
             yaml_name='Config_TestDAC',
-            folder_reference='lab_driver'
+            folder_reference=folder_reference
         ).get_class(SettingsDAC)
         self.check_settings_error()
 
