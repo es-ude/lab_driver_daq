@@ -103,7 +103,7 @@ class CharacterizationDevice(CharacterizationCommon):
         :param func_sens:   Function for sensing the applied voltage/current (measured) from DAQ device
         :param func_resp:    Function for getting the applied voltage/current (output) from DAQ device
         :param func_beep:   Function for do a beep in DAQ
-        :return:            Dictionary with ['stim': ADC input stream, 'settings': Settings, 'ch<X>': DUT results with 'val' and 'std']"""
+        :return:            Dictionary with ['stim': input test signal of one repetition, 'settings': Settings, 'rpt<X>': Test results]"""
         stimuli = func_stim()
         results = {'stim': stimuli}
 

@@ -18,6 +18,13 @@ class CharacterizationCommon:
         pass
 
     @staticmethod
+    def dummy_reset() -> None:
+        """Function for bypassing the device reset
+        :return:        None
+        """
+        pass
+
+    @staticmethod
     def dummy_set_mux(chnl: int) -> None:
         """Function for bypassing the definition of the multiplexer stage
         :param chnl:    Integer with MUX number

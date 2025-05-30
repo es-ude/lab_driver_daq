@@ -18,7 +18,7 @@ class SettingsDAC:
         daq_ovr:    Integer number for oversampling of DAQ system
         num_rpt:    Integer of completes cycles to run DAQ
         num_steps:  Integer of intermediate steps in ramping
-        sleep_sec:      Sleeping seconds between each DAQ setting
+        sleep_sec:  Sleeping seconds between each DAQ setting
     """
     dac_reso: int
     dac_chnl: list
@@ -82,7 +82,7 @@ class CharacterizationDAC(CharacterizationCommon):
         :param func_dac:    Function for applying selected channel and data on DUT-DAC with input params (chnl, data)
         :param func_daq:    Function for sensing the DAC output with external multimeter device
         :param func_beep:   Function for do a beep in DAQ
-        :return:            Dictionary with ['stim': DAC input stream, 'settings': Settings, 'ch<X>': DAQ results with 'val' and 'std']"""
+        :return:            Dictionary with ['stim': input test signal of one repetition, 'settings': Settings, 'ch<X>': DAQ results with 'val' and 'std']"""
         stimuli = self.settings.get_cycle_stimuli_input()
 
         results = {'stim': stimuli}

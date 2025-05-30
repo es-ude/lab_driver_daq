@@ -94,7 +94,7 @@ class CharacterizationADC(CharacterizationCommon):
         :param func_sens:   Function for getting the applied voltage (measured) from DAQ device
         :param func_dut:    Function for sensing the ADC output with external multimeter device with inputs (chnl)
         :param func_beep:   Function for do a beep in DAQ
-        :return:            Dictionary with ['stim': ADC input stream, 'settings': Settings, 'ch<X>': DUT results with 'val' and 'std']"""
+        :return:            Dictionary with ['stim': input test signal of one repetition, 'settings': Settings, 'ch<X>': DUT results with 'val' and 'std']"""
         stimuli = self.settings.get_cycle_stimuli_input()
 
         results = {'stim': stimuli}
