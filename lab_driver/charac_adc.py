@@ -54,7 +54,7 @@ class SettingsADC:
 
     def get_cycle_empty_array(self) -> np.ndarray:
         """Function for generating an empty numpy array with right size"""
-        assert self.daq_ovr > 0, "Variable: adc_ovr - Must be greater than 1"
+        assert self.daq_ovr > 0, "Variable: daq_ovr - Must be greater than 1"
         return np.zeros(shape=(self.num_rpt, self.get_num_steps(), self.daq_ovr), dtype=float)
 
 
