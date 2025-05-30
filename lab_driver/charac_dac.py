@@ -53,7 +53,7 @@ DefaultSettingsDAC = SettingsDAC(
 
 
 class CharacterizationDAC(CharacterizationCommon):
-    _sleep_set_sec: float = 0.01
+    _sleep_set_sec: float
     settings: SettingsDAC
 
     def __init__(self, folder_reference: str) -> None:

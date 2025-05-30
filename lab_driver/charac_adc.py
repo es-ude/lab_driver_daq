@@ -4,9 +4,9 @@ from os import makedirs
 from os.path import join
 from tqdm import tqdm
 from time import sleep
-from random import random
 from datetime import datetime
 from dataclasses import dataclass
+from lab_driver.charac_common import CharacterizationCommon
 from lab_driver.yaml_handler import YamlConfigHandler
 
 
@@ -37,13 +37,16 @@ class SettingsADC:
         """Function for getting the datetime in string format"""
         return datetime.now().strftime("%Y%m%d-%H%M%S")
 
+    def get_num_steps(self) -> int:
+        """Function for getting the number of steps in testing"""
+        return int((self.adc_rang[1] - self.adc_rang[0]) / self.delta_steps) + 1
+
     def get_cycle_stimuli_input(self) -> np.ndarray:
-        num_points = (self.adc_rang[1] - self.adc_rang[0]) / self.delta_steps
-        return np.linspace(start=self.adc_rang[0], stop=self.adc_rang[1], num=num_points, endpoint=True, dtype=float)
+        return np.linspace(start=self.adc_rang[0], stop=self.adc_rang[1], num=self.get_num_steps(), endpoint=True, dtype=float)
 
     def get_cycle_empty_array(self) -> np.ndarray:
         """Function for generating an empty numpy array with right size"""
-        return np.zeros(shape=(self.num_rpt, self.get_cycle_stimuli_input().size), dtype=float)
+        return np.zeros(shape=(self.num_rpt, self.get_cycle_stimuli_input().size, self.adc_ovr), dtype=float)
 
 
 DefaultSettingsADC = SettingsADC(
@@ -58,14 +61,15 @@ DefaultSettingsADC = SettingsADC(
 )
 
 
-class CharacterizationADC:
-    _sleep_set_sec: float = 0.01
+class CharacterizationADC(CharacterizationCommon):
+    _sleep_set_sec: float
     settings: SettingsADC
 
     def __init__(self, folder_reference: str) -> None:
         """Class for handling the measurement routine for characterising a Digital-Analog-Converter (DAC)
         :param folder_reference:    String with source folder to find the Main Repo Path
         """
+        super().__init__()
         self._logger = getLogger(__name__)
         self.settings = YamlConfigHandler(
             yaml_template=DefaultSettingsADC,
@@ -84,64 +88,35 @@ class CharacterizationADC:
         assert self.settings.adc_voltage_min <= self.settings.adc_rang[0] and self.settings.adc_voltage_min < self.settings.adc_rang[1], "Variable: adc_voltage_min must be smaller than adc_rang"
         assert self.settings.adc_voltage_max > self.settings.adc_rang[0] and self.settings.adc_voltage_max >= self.settings.adc_rang[1], "Variable: adc_voltage_max must be greater than adc_rang"
 
-    @staticmethod
-    def bypass_mock_beep() -> None:
-        """Function for bypassing the beep on DAQ device
-        :return:        None
-        """
-        pass
-
-    @staticmethod
-    def bypass_mock_mux(chnl: int) -> None:
-        """Function for bypassing the definition of the multiplexer stage
-        :param chnl:    Integer with MUX number
-        :return:        None
-        """
-        pass
-
-    @staticmethod
-    def bypass_mock_dac(chnl: int, data: int) -> None:
-        """Function for bypassing the definition of the DAC output
-        :param chnl:    Integer with DAC number
-        :param data:    Integer with DAC data
-        :return:        None
-        """
-        pass
-
-    @staticmethod
-    def bypass_mock_daq() -> float:
-        """Function for bypassing the definition of the DAQ measurement device
-        :return:        Floating value in range of [-1, +1]
-        """
-        return 2*(0.5 - random())
-
-    def run_test_dac_transfer(self, func_mux, func_dac, func_daq, func_beep) -> dict:
-        """Function for characterizing the transfer function of the DAC
-        :param func_mux:    Function for defining the pre-processing part of the hardware DUT, setting the DAC channel with inputs (chnl)
-        :param func_dac:    Function for applying selected channel and data on DUT-DAC with input params (chnl, data)
-        :param func_daq:    Function for sensing the DAC output with external multimeter device
+    def run_test_transfer(self, func_mux, func_daq, func_sens, func_dut, func_beep) -> dict:
+        """Function for characterizing the transfer function of the ADC
+        :param func_mux:    Function for defining the pre-processing part of the hardware DUT, setting the ADC channel with inputs (chnl)
+        :param func_daq:    Function for applying selected channel and data on DAQ with input params (data)
+        :param func_sens:   Function for getting the applied voltage (measured) from DAQ device
+        :param func_dut:    Function for sensing the ADC output with external multimeter device with inputs (chnl)
         :param func_beep:   Function for do a beep in DAQ
-        :return:            Dictionary with ['stim': DAC input stream, 'settings': Settings, 'ch<X>': DAQ results with 'val' and 'std']"""
+        :return:            Dictionary with ['stim': ADC input stream, 'settings': Settings, 'ch<X>': DUT results with 'val' and 'std']"""
         stimuli = self.settings.get_cycle_stimuli_input()
 
         results = {'stim': stimuli}
         for chnl in self.settings.adc_chnl:
-            results_ch_val = self.settings.get_cycle_empty_array()
-            results_ch_std = self.settings.get_cycle_empty_array()
+            sens_test = self.settings.get_cycle_empty_array()
+            results_ch = self.settings.get_cycle_empty_array()
             func_mux(chnl)
             self._logger.debug(f"Prepared DAC channel: {chnl}")
 
             for rpt_idx in range(self.settings.num_rpt):
                 for val_idx, data in enumerate(tqdm(stimuli, ncols=100, desc=f"Process CH{chnl} @ repetition {1 + rpt_idx}/{self.settings.num_rpt}")):
-                    func_dac(chnl, data)
+                    func_daq(data)
+
                     sleep(self._sleep_set_sec)
-                    read_volt = np.array([func_daq() for _ in range(self.settings.adc_ovr)])
-                    results_ch_val[rpt_idx, val_idx] = np.mean(read_volt)
-                    results_ch_std[rpt_idx, val_idx] = np.std(read_volt)
+                    for daq_idx in range(self.settings.adc_ovr):
+                        sens_test[rpt_idx, val_idx, daq_idx] = func_sens()
+                        results_ch[rpt_idx, val_idx, daq_idx] = func_dut(chnl)
                 self._logger.debug(f"Sweep DAC channel: {chnl}")
 
                 func_beep()
-            results.update({f"ch{chnl:02d}": {'val': results_ch_val, 'std': results_ch_std}})
+            results.update({f"ch{chnl:02d}": results_ch})
         return results
 
     def save_results(self, data: dict, folder_name: str) -> None:

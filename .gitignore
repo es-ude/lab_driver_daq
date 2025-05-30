@@ -9,3 +9,4 @@ docs/apidocs
 **/dist
 **/*.lock
 **/*.log
+**/*.yaml

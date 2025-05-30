@@ -69,10 +69,10 @@ class TestDAC(unittest.TestCase):
         hndl.settings = set0
         hndl.check_settings_error()
         results = hndl.run_test_dac_transfer(
-            func_mux=hndl.bypass_mock_mux,
-            func_dac=hndl.bypass_mock_dac,
-            func_daq=hndl.bypass_mock_daq,
-            func_beep=hndl.bypass_mock_beep
+            func_mux=hndl.dummy_set_mux,
+            func_dac=hndl.dummy_set_dut_dac,
+            func_daq=hndl.dummy_get_daq,
+            func_beep=hndl.dummy_beep
         )
         self.assertTrue(len(results) == 1 + len(set0.dac_chnl))
 
