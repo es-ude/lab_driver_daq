@@ -1,7 +1,5 @@
 import numpy as np
 from logging import getLogger
-from os import makedirs
-from os.path import join
 from tqdm import tqdm
 from time import sleep
 from datetime import datetime
@@ -14,55 +12,66 @@ from lab_driver.yaml_handler import YamlConfigHandler
 class SettingsADC:
     """Class with settings for testing the DUT of Analog-Digital-Converter (ADC)
     Attributes:
-        adc_voltage_min:    Floating with minimal ADC voltage
-        adc_voltage_max:    Floating with maximal ADC voltage
-        adc_reso:   Integer with bit resolution of ADC
-        adc_chnl:   List with ADC channel IDs to test (like: [idx for idx in range (16)])
-        adc_rang:   List with [min, max] analog ranges for testing the N-bit ADC (like: [0, 65535])
-        adc_ovr:    Integer number for oversampling of DAQ system
-        num_rpt:    Integer of completes cycles to run DAQ
-        delta_steps:  Float of intermediate steps in ramping
+        voltage_min:    Floating with minimal ADC voltage
+        voltage_max:    Floating with maximal ADC voltage
+        adc_reso:       Integer with bit resolution of ADC
+        adc_chnl:       List with ADC channel IDs to test (like: [idx for idx in range (16)])
+        adc_rang:       List with [min, max] analog ranges for testing the N-bit ADC (like: [0, 65535])
+        daq_ovr:        Integer number for oversampling of DAQ system
+        num_rpt:        Integer of completes cycles to run DAQ
+        sleep_sec:      Sleeping seconds between each DAQ setting
     """
-    adc_voltage_min: float
-    adc_voltage_max: float
+    voltage_min: float
+    voltage_max: float
     adc_reso: int
     adc_chnl: list
     adc_rang: list
-    adc_ovr: int
+    daq_ovr: int
     num_rpt: int
     delta_steps: float
+    sleep_sec: float
 
     @staticmethod
     def get_date_string() -> str:
         """Function for getting the datetime in string format"""
         return datetime.now().strftime("%Y%m%d-%H%M%S")
 
+    def get_common_mode_voltage(self) -> float:
+        """Getting the Common Mode Voltage (VCM) of the DUT"""
+        return (self.voltage_min + self.voltage_max) / 2
+
     def get_num_steps(self) -> int:
         """Function for getting the number of steps in testing"""
+        assert len(self.adc_rang) == 2, "Variable: adc_rang - Length must be 2"
+        assert self.adc_rang[0] < self.adc_rang[1], "Variable: adc_rang[0] must be smaller than adc_rang[1]"
+        assert self.voltage_min <= self.adc_rang[0] and self.voltage_min < self.adc_rang[1], "Variable: voltage_min must be smaller than adc_rang"
+        assert self.voltage_max > self.adc_rang[0] and self.voltage_max >= self.adc_rang[1], "Variable: voltage_max must be greater than adc_rang"
         return int((self.adc_rang[1] - self.adc_rang[0]) / self.delta_steps) + 1
 
     def get_cycle_stimuli_input(self) -> np.ndarray:
+        """Getting the numpy array with a stimuli with sawtooth waveform"""
         return np.linspace(start=self.adc_rang[0], stop=self.adc_rang[1], num=self.get_num_steps(), endpoint=True, dtype=float)
 
     def get_cycle_empty_array(self) -> np.ndarray:
         """Function for generating an empty numpy array with right size"""
-        return np.zeros(shape=(self.num_rpt, self.get_cycle_stimuli_input().size, self.adc_ovr), dtype=float)
+        assert self.daq_ovr > 0, "Variable: adc_ovr - Must be greater than 1"
+        return np.zeros(shape=(self.num_rpt, self.get_num_steps(), self.daq_ovr), dtype=float)
 
 
 DefaultSettingsADC = SettingsADC(
-    adc_voltage_min=0.0,
-    adc_voltage_max=5.0,
+    voltage_min=0.0,
+    voltage_max=5.0,
     adc_reso=16,
     adc_chnl=[idx for idx in range(16)],
     adc_rang=[0.0, 5.0],
-    adc_ovr=1,
+    daq_ovr=1,
     num_rpt=1,
     delta_steps=0.05,
+    sleep_sec=0.1
 )
 
 
 class CharacterizationADC(CharacterizationCommon):
-    _sleep_set_sec: float
     settings: SettingsADC
 
     def __init__(self, folder_reference: str) -> None:
@@ -77,16 +86,6 @@ class CharacterizationADC(CharacterizationCommon):
             yaml_name='Config_TestADC',
             folder_reference=folder_reference,
         ).get_class(SettingsADC)
-        self.check_settings_error()
-
-    def check_settings_error(self) -> None:
-        """Function for checking for input errors"""
-        assert self.settings.adc_ovr > 0, "Variable: adc_ovr - Must be greater than 1"
-        assert len(self.settings.adc_rang) == 2, "Variable: adc_rang - Length must be 2"
-
-        assert self.settings.adc_rang[0] < self.settings.adc_rang[1], "Variable: adc_rang[0] must be smaller than adc_rang[1]"
-        assert self.settings.adc_voltage_min <= self.settings.adc_rang[0] and self.settings.adc_voltage_min < self.settings.adc_rang[1], "Variable: adc_voltage_min must be smaller than adc_rang"
-        assert self.settings.adc_voltage_max > self.settings.adc_rang[0] and self.settings.adc_voltage_max >= self.settings.adc_rang[1], "Variable: adc_voltage_max must be greater than adc_rang"
 
     def run_test_transfer(self, func_mux, func_daq, func_sens, func_dut, func_beep) -> dict:
         """Function for characterizing the transfer function of the ADC
@@ -103,35 +102,17 @@ class CharacterizationADC(CharacterizationCommon):
             sens_test = self.settings.get_cycle_empty_array()
             results_ch = self.settings.get_cycle_empty_array()
             func_mux(chnl)
-            self._logger.debug(f"Prepared DAC channel: {chnl}")
+            self._logger.debug(f"Prepared ADC channel: {chnl}")
 
             for rpt_idx in range(self.settings.num_rpt):
                 for val_idx, data in enumerate(tqdm(stimuli, ncols=100, desc=f"Process CH{chnl} @ repetition {1 + rpt_idx}/{self.settings.num_rpt}")):
                     func_daq(data)
-
-                    sleep(self._sleep_set_sec)
-                    for daq_idx in range(self.settings.adc_ovr):
+                    sleep(self.settings.sleep_sec)
+                    for daq_idx in range(self.settings.daq_ovr):
                         sens_test[rpt_idx, val_idx, daq_idx] = func_sens()
                         results_ch[rpt_idx, val_idx, daq_idx] = func_dut(chnl)
-                self._logger.debug(f"Sweep DAC channel: {chnl}")
+                self._logger.debug(f"Sweep ADC channel: {chnl}")
 
                 func_beep()
             results.update({f"ch{chnl:02d}": results_ch})
         return results
-
-    def save_results(self, data: dict, folder_name: str) -> None:
-        """Function for saving the measured data in numpy format
-        :param data:        Dictionary with results from measurement
-        :param folder_name: Name of folder where results will be saved
-        :return:            None
-        """
-        makedirs(folder_name, exist_ok=True)
-        np.savez_compressed(
-            file=join(folder_name, 'dac_measured_data.npz'),
-            allow_pickle=True,
-            data=data,
-            settings=self.settings,
-            date=self.settings.get_date_string()
-        )
-        self._logger.debug(f"Saved results in folder: {folder_name}")
-        self._logger.debug(f"Saved measured with {len(data)} entries")

@@ -1,21 +1,14 @@
+import numpy as np
+from logging import getLogger
+from os import makedirs
+from os.path import join
 from random import random, randint
 
 
 class CharacterizationCommon:
-    _sleep_set_sec: float = 0.01
-
-    def set_sleeping_setting_input(self, sleep_sec: float) -> None:
-        """Function for setting the sleeping seconds between setting the input stimuli and sensing output
-        :param sleep_sec:   Floating with sleeping seconds
-        :return:            None
-        """
-        self._sleep_set_sec = abs(sleep_sec)
-
-    def get_sleeping_setting_input(self) -> float:
-        """Function for setting the sleeping seconds between setting the input stimuli and sensing output
-        :return:            Floating with sleeping seconds
-        """
-        return self._sleep_set_sec
+    def __init__(self) -> None:
+        """Common class with functions used in all characterisation methods"""
+        self._logger = getLogger(__name__)
 
     @staticmethod
     def dummy_beep() -> None:
@@ -63,3 +56,21 @@ class CharacterizationCommon:
         :return:        Floating value in range of [-1, +1]
         """
         pass
+
+    def save_results(self, file_name: str, settings: object, data: dict, folder_name: str) -> None:
+        """Function for saving the measured data in numpy format
+        :param file_name:   Name of file to save (without extension)
+        :param settings:    Class with settings
+        :param data:        Dictionary with results from measurement
+        :param folder_name: Name of folder where results will be saved
+        :return:            None
+        """
+        makedirs(folder_name, exist_ok=True)
+        np.savez_compressed(
+            file=join(folder_name, f'{file_name}.npz'),
+            allow_pickle=True,
+            data=data,
+            settings=settings
+        )
+        self._logger.debug(f"Saved results in folder: {folder_name}")
+        self._logger.debug(f"Saved measured with {len(data)} entries")

@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
 from copy import deepcopy
+from lab_driver import repo_name
 from lab_driver.charac_dac import SettingsDAC, CharacterizationDAC
 
 
@@ -10,7 +11,8 @@ settings = SettingsDAC(
     dac_rang=[0, 2**16-1],
     num_rpt=1,
     num_steps=1,
-    daq_ovr=4
+    daq_ovr=4,
+    sleep_sec=0.01
 )
 
 
@@ -19,6 +21,18 @@ class TestDAC(unittest.TestCase):
         date = settings.get_date_string()
         check = len(date.split('-')[0]) == 8 and len(date.split('-')[1]) == 6
         self.assertTrue(check)
+
+    def test_settings_num_steps(self):
+        set0 = deepcopy(settings)
+        set0.dac_rang = [0, 2**16-1]
+
+        points_result = []
+        points_check = [65536, 32768, 16384, 8192, 4096]
+        delta_list = [1, 2, 4, 8, 16]
+        for step in delta_list:
+            set0.num_steps = step
+            points_result.append(set0.get_num_steps())
+        np.testing.assert_array_equal(points_result, points_check)
 
     def test_settings_stimuli_16bit_1step(self):
         set0 = deepcopy(settings)
@@ -65,9 +79,8 @@ class TestDAC(unittest.TestCase):
         set0.num_steps = 16
         set0.num_rpt = 2
 
-        hndl = CharacterizationDAC(folder_reference='lab_driver')
+        hndl = CharacterizationDAC(folder_reference=repo_name)
         hndl.settings = set0
-        hndl.check_settings_error()
         results = hndl.run_test_dac_transfer(
             func_mux=hndl.dummy_set_mux,
             func_dac=hndl.dummy_set_dut_dac,

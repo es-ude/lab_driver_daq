@@ -1,7 +1,5 @@
 import numpy as np
 from logging import getLogger
-from os import makedirs
-from os.path import join
 from tqdm import tqdm
 from time import sleep
 from datetime import datetime
@@ -20,6 +18,7 @@ class SettingsDAC:
         daq_ovr:    Integer number for oversampling of DAQ system
         num_rpt:    Integer of completes cycles to run DAQ
         num_steps:  Integer of intermediate steps in ramping
+        sleep_sec:      Sleeping seconds between each DAQ setting
     """
     dac_reso: int
     dac_chnl: list
@@ -27,19 +26,27 @@ class SettingsDAC:
     daq_ovr: int
     num_rpt: int
     num_steps: int
+    sleep_sec: float
 
     @staticmethod
     def get_date_string() -> str:
         """Function for getting the datetime in string format"""
         return datetime.now().strftime("%Y%m%d-%H%M%S")
 
+    def get_num_steps(self) -> int:
+        """Function for getting the number of steps in testing"""
+        assert len(self.dac_rang) == 2, "Variable: adc_rang - Length must be 2"
+        assert self.dac_rang[0] < self.dac_rang[1], "Variable: adc_rang[0] must be smaller than adc_rang[1]"
+        return int((self.dac_rang[1] - self.dac_rang[0]) / self.num_steps) + 1
+
     def get_cycle_stimuli_input(self) -> np.ndarray:
-        num_points = int((self.dac_rang[1] - self.dac_rang[0] + 1) / self.num_steps)
-        return np.linspace(start=self.dac_rang[0], stop=self.dac_rang[1], num=num_points, endpoint=True, dtype=int)
+        """Getting the numpy array with a stimuli with sawtooth waveform"""
+        return np.linspace(start=self.dac_rang[0], stop=self.dac_rang[1], num=self.get_num_steps(), endpoint=True, dtype=int)
 
     def get_cycle_empty_array(self) -> np.ndarray:
         """Function for generating an empty numpy array with right size"""
-        return np.zeros(shape=(self.num_rpt, self.get_cycle_stimuli_input().size, self.daq_ovr), dtype=float)
+        assert self.daq_ovr > 0, "Variable: adc_ovr - Must be greater than 1"
+        return np.zeros(shape=(self.num_rpt, self.get_num_steps(), self.daq_ovr), dtype=float)
 
 
 DefaultSettingsDAC = SettingsDAC(
@@ -49,11 +56,11 @@ DefaultSettingsDAC = SettingsDAC(
     daq_ovr=1,
     num_rpt=1,
     num_steps=1,
+    sleep_sec=0.1
 )
 
 
 class CharacterizationDAC(CharacterizationCommon):
-    _sleep_set_sec: float
     settings: SettingsDAC
 
     def __init__(self, folder_reference: str) -> None:
@@ -68,12 +75,6 @@ class CharacterizationDAC(CharacterizationCommon):
             yaml_name='Config_TestDAC',
             folder_reference=folder_reference
         ).get_class(SettingsDAC)
-        self.check_settings_error()
-
-    def check_settings_error(self) -> None:
-        """Function for checking for input errors"""
-        assert self.settings.daq_ovr > 0, "Variable: daq_ovr - Must be greater than 1"
-        assert len(self.settings.dac_rang) == 2, "Variable: dac_rang - Length must be 2"
 
     def run_test_dac_transfer(self, func_mux, func_dac, func_daq, func_beep) -> dict:
         """Function for characterizing the transfer function of the DAC
@@ -93,7 +94,7 @@ class CharacterizationDAC(CharacterizationCommon):
             for rpt_idx in range(self.settings.num_rpt):
                 for val_idx, data in enumerate(tqdm(stimuli, ncols=100, desc=f"Process CH{chnl} @ repetition {1 + rpt_idx}/{self.settings.num_rpt}")):
                     func_dac(chnl, data)
-                    sleep(self._sleep_set_sec)
+                    sleep(self.settings.sleep_sec)
                     for ovr_idx in range(self.settings.daq_ovr):
                         results_ch[rpt_idx, val_idx, ovr_idx] = func_daq()
                 self._logger.debug(f"Sweep DAC channel: {chnl}")
@@ -101,21 +102,3 @@ class CharacterizationDAC(CharacterizationCommon):
                 func_beep()
             results.update({f"ch{chnl:02d}": results_ch})
         return results
-
-    def save_results(self, filename: str, data: dict, folder_name: str) -> None:
-        """Function for saving the measured data in numpy format
-        :param filename:    String with filename
-        :param data:        Dictionary with results from measurement
-        :param folder_name: Name of folder where results will be saved
-        :return:            None
-        """
-        makedirs(folder_name, exist_ok=True)
-        np.savez_compressed(
-            file=join(folder_name, f'{filename}.npz'),
-            allow_pickle=True,
-            data=data,
-            settings=self.settings,
-            date=self.settings.get_date_string()
-        )
-        self._logger.debug(f"Saved results in folder: {folder_name}")
-        self._logger.debug(f"Saved measured with {len(data)} entries")

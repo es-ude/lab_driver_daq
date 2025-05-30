@@ -21,17 +21,6 @@ class TestCommon(unittest.TestCase):
         check = result.shape == (100,) and result.min() >= 0.0 and result.max() <= 2**16-1
         self.assertTrue(check)
 
-    def test_common_sleeping_value(self):
-        hndl = CharacterizationCommon()
-        test_sleep = [-1.0, -0.5, 0.0, 0.5, 1.0]
-        chck_sleep = [1.0, 0.5, 0.0, 0.5, 1.0]
-
-        result_sleep = list()
-        for val in test_sleep:
-            hndl.set_sleeping_setting_input(val)
-            result_sleep.append(hndl.get_sleeping_setting_input())
-
-        np.testing.assert_array_equal(result_sleep, chck_sleep)
 
 if __name__ == '__main__':
     unittest.main()
