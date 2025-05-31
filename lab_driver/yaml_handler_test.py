@@ -2,7 +2,7 @@ import unittest
 from os.path import join, exists
 from dataclasses import dataclass
 from lab_driver import get_repo_name, get_path_project_start
-from lab_driver.yaml_handler import YamlConfigHandler
+from lab_driver.yaml_handler import YamlConfigHandler, get_path_to_project
 
 
 @dataclass
@@ -47,7 +47,7 @@ class TestYamlHandler(unittest.TestCase):
     )
 
     def test_repo_name(self):
-        test_name = ['driver_meas_dev', 'lab_driver_daq']
+        test_name = ['driver_meas_dev', 'lab_driver_daq', 'lab_driver']
         check = get_repo_name()
         result = True if check in test_name else False
         self.assertTrue(result)
