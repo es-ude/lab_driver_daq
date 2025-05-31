@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from copy import deepcopy
-from lab_driver import repo_name
+from lab_driver import get_repo_name
 from lab_driver.charac_dac import SettingsDAC, CharacterizationDAC
 
 
@@ -79,7 +79,7 @@ class TestDAC(unittest.TestCase):
         set0.num_steps = 16
         set0.num_rpt = 2
 
-        hndl = CharacterizationDAC(folder_reference=repo_name)
+        hndl = CharacterizationDAC(folder_reference=get_repo_name())
         hndl.settings = set0
         results = hndl.run_test_dac_transfer(
             func_mux=hndl.dummy_set_mux,

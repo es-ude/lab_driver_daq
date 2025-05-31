@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from copy import deepcopy
-from lab_driver import repo_name
+from lab_driver import get_repo_name
 from lab_driver.charac_amp import SettingsAmplifier, CharacterizationAmplifier
 
 
@@ -74,7 +74,7 @@ class TestAmplifier(unittest.TestCase):
         set0.delta_steps = 0.5
         set0.num_rpt = 2
 
-        hndl = CharacterizationAmplifier(folder_reference=repo_name)
+        hndl = CharacterizationAmplifier(folder_reference=get_repo_name())
         hndl.settings = set0
         results = hndl.run_test_transfer(
             chnl=0,

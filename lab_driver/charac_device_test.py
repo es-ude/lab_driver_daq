@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from copy import deepcopy
-from lab_driver import repo_name
+from lab_driver import get_repo_name
 from lab_driver.charac_device import SettingsDevice, CharacterizationDevice
 
 
@@ -92,7 +92,7 @@ class TestDevice(unittest.TestCase):
         set0.delta_steps = 0.5
         set0.num_rpt = 2
 
-        hndl = CharacterizationDevice(folder_reference=repo_name)
+        hndl = CharacterizationDevice(folder_reference=get_repo_name())
         hndl.settings = set0
         results = hndl.run_test_transfer(
             func_stim=set0.get_cycle_stimuli_input_sawtooth,
