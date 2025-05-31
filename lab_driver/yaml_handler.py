@@ -1,11 +1,26 @@
 import yaml
 import logging
+from pathlib import Path
 from typing import Any
+import lab_driver
 from os import makedirs, getcwd
-from os.path import join, exists, abspath
+from os.path import join, exists, abspath, dirname
 
 
-def get_path_project_start(folder_reference: str='lab_driver', new_folder: str = '') -> str:
+def get_path_to_project() -> str:
+    """Getting the absolute path to project start"""
+    path_to_import = dirname(lab_driver.__file__)
+    path_split = Path(path_to_import).parts[:-1]
+    path_to_start = join(*[path_seg for path_seg in path_split])
+    return path_to_start
+
+
+def get_repo_name() -> str:
+    """Getting the repo name"""
+    return Path(get_path_to_project()).parts[-1]
+
+
+def get_path_project_start(folder_reference: str=get_repo_name(), new_folder: str = '') -> str:
     """Function for getting the path to find the project folder structure.
     :param folder_reference:    String with folder reference to start
     :param new_folder:          New folder path (optional)

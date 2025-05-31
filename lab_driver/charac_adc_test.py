@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from copy import deepcopy
-from lab_driver import repo_name
+from lab_driver import get_repo_name
 from lab_driver.charac_adc import SettingsADC, CharacterizationADC
 
 
@@ -76,7 +76,7 @@ class TestADC(unittest.TestCase):
         set0.delta_steps = 0.5
         set0.num_rpt = 2
 
-        hndl = CharacterizationADC(folder_reference=repo_name)
+        hndl = CharacterizationADC(folder_reference=get_repo_name())
         hndl.settings = set0
         results = hndl.run_test_transfer(
             func_mux=hndl.dummy_set_mux,

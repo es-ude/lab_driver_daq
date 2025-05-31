@@ -1,7 +1,8 @@
 import unittest
 from os.path import join, exists
 from dataclasses import dataclass
-from lab_driver.yaml_handler import YamlConfigHandler, get_path_project_start
+from lab_driver import get_repo_name, get_path_project_start
+from lab_driver.yaml_handler import YamlConfigHandler
 
 
 @dataclass
@@ -33,7 +34,7 @@ data_wr = {
 }
 
 
-class TestSum(unittest.TestCase):
+class TestYamlHandler(unittest.TestCase):
     dummy0 = YamlConfigHandler(
         yaml_template=data_wr,
         path2yaml=path2yaml,
@@ -44,6 +45,12 @@ class TestSum(unittest.TestCase):
         path2yaml=path2yaml,
         yaml_name=filename + '1'
     )
+
+    def test_repo_name(self):
+        test_name = ['driver_meas_dev', 'lab_driver_daq']
+        check = get_repo_name()
+        result = True if check in test_name else False
+        self.assertTrue(result)
 
     def test_yaml_create(self):
         self.dummy0.write_dict_to_yaml(data_wr)
