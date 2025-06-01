@@ -1,8 +1,7 @@
 import unittest
 from os.path import join, exists
 from dataclasses import dataclass
-from lab_driver import get_repo_name, get_path_project_start
-from lab_driver.yaml_handler import YamlConfigHandler, get_path_to_project
+from lab_driver.yaml_handler import get_repo_name, YamlConfigHandler, get_path_to_project
 
 
 @dataclass
@@ -22,7 +21,7 @@ DefaultSettingsTest = SettingsTest(
 )
 
 # --- DATA FOR TESTING
-path2yaml = join(get_path_project_start(), join('temp_test', 'config'))
+path2yaml = join(get_path_to_project(), join('temp_test', 'config'))
 filename = 'Config_Test'
 data_wr = {
     'Name': 'John Doe',
@@ -50,6 +49,12 @@ class TestYamlHandler(unittest.TestCase):
         test_name = ['driver_meas_dev', 'lab_driver_daq', 'lab_driver']
         check = get_repo_name()
         result = True if check in test_name else False
+        self.assertTrue(result)
+
+    def test_project_path(self):
+        ref = ['driver_meas_dev', 'lab_driver_daq', 'lab_driver']
+        chck = get_path_to_project()
+        result = ref[0] in chck or ref[1] in chck or ref[2] in chck
         self.assertTrue(result)
 
     def test_yaml_create(self):
