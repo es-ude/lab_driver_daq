@@ -21,4 +21,3 @@ if __name__ == '__main__':
     test_runner.run(test_suite)
 
     rmtree('temp_test')
-    rmtree('config')

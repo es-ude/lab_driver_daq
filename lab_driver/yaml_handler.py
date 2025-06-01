@@ -1,18 +1,12 @@
 import yaml
-import logging
+from logging import getLogger
 from pathlib import Path
 from typing import Any
 from os import makedirs, getcwd
 from os.path import join, exists, abspath, dirname
 
 
-def get_path_to_project() -> str:
-    """Getting the absolute path to project start"""
-    import lab_driver
-    path_to_import = dirname(lab_driver.__file__)
-    path_split = Path(path_to_import).parts[:-1]
-    path_to_start = join(*[path_seg for path_seg in path_split])
-    return path_to_start
+logger = getLogger(__name__)
 
 
 def get_repo_name() -> str:
@@ -22,14 +16,22 @@ def get_repo_name() -> str:
     return Path(path_to_import).parts[-1]
 
 
-def get_path_project_start(folder_reference: str=get_repo_name(), new_folder: str = '') -> str:
+def get_path_to_project(new_folder: str='', folder_ref: str='') -> str:
     """Function for getting the path to find the project folder structure.
-    :param folder_reference:    String with folder reference to start
-    :param new_folder:          New folder path (optional)
-    :return:                    String of absolute path to start the project structure
+    :param new_folder:      New folder path (optional)
+    :param folder_ref:      String with folder reference to start
+    :return:                String of absolute path to start the project structure
     """
-    folder_start = join(getcwd().split(folder_reference)[0], folder_reference) if folder_reference in getcwd() else getcwd()
-    return abspath(join(folder_start, new_folder))
+    if get_repo_name() in getcwd():
+        import lab_driver as ref
+        path_to_import = dirname(ref.__file__)
+        path_split = Path(path_to_import).parts[:-1]
+        path_to_proj = join(*[path_seg for path_seg in path_split], new_folder)
+    else:
+        path_to_import = join(getcwd().split(folder_ref)[0], folder_ref) if folder_ref else getcwd()
+        path_to_proj = join(path_to_import, new_folder)
+    logger.debug(f"Project start at: {path_to_proj}")
+    return abspath(path_to_proj)
 
 
 class YamlConfigHandler:
@@ -50,8 +52,8 @@ class YamlConfigHandler:
             yaml_name:          String with name of the YAML file [Default: 'Config_Train']
             folder_reference:   String with folder reference to start
         """
-        self.__logger = logging.getLogger(__name__)
-        self.__path2yaml_folder = join(get_path_project_start(folder_reference=folder_reference), path2yaml)
+        self.__logger = getLogger(__name__)
+        self.__path2yaml_folder = join(get_path_to_project(folder_ref=folder_reference), path2yaml)
         self.__yaml_name = self.__remove_ending_from_filename(yaml_name)
 
         makedirs(self.__path2yaml_folder, exist_ok=True)
