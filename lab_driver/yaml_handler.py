@@ -13,7 +13,7 @@ def get_repo_name() -> str:
     """Getting string with repo name"""
     import lab_driver
     path_to_import = dirname(lab_driver.__file__)
-    return Path(path_to_import).parts[-1]
+    return Path(path_to_import).parts[-2]
 
 
 def get_path_to_project(new_folder: str='', folder_ref: str='') -> str:
@@ -22,7 +22,7 @@ def get_path_to_project(new_folder: str='', folder_ref: str='') -> str:
     :param folder_ref:      String with folder reference to start
     :return:                String of absolute path to start the project structure
     """
-    if get_repo_name() in getcwd():
+    if get_repo_name() in getcwd() and not folder_ref:
         import lab_driver as ref
         path_to_import = dirname(ref.__file__)
         path_split = Path(path_to_import).parts[:-1]

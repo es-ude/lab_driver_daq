@@ -3,6 +3,8 @@ build
 temp_test
 docs/apidocs
 
+**/config
+**/runs
 **/__pycache__
 **/.venv
 **/venv
