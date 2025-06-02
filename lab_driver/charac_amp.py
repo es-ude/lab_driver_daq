@@ -66,6 +66,7 @@ DefaultSettingsAmplifier = SettingsAmplifier(
 
 
 class CharacterizationAmplifier(CharacterizationCommon):
+    _input_val: float
     settings: SettingsAmplifier
 
     def __init__(self, folder_reference: str) -> None:
@@ -100,6 +101,7 @@ class CharacterizationAmplifier(CharacterizationCommon):
 
         for rpt_idx in range(self.settings.num_rpt):
             for val_idx, data in enumerate(tqdm(stimuli, ncols=100, desc=f"Process CH{chnl} @ repetition {1 + rpt_idx}/{self.settings.num_rpt}")):
+                self._input_val = data
                 func_set_daq(data)
                 sleep(self.settings.sleep_sec)
                 for daq_idx in range(self.settings.daq_ovr):

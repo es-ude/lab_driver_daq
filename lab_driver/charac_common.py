@@ -6,6 +6,8 @@ from random import random, randint
 
 
 class CharacterizationCommon:
+    _input_val: float | int
+
     def __init__(self) -> None:
         """Common class with functions used in all characterisation methods"""
         self._logger = getLogger(__name__)
@@ -23,6 +25,10 @@ class CharacterizationCommon:
         :return:        None
         """
         pass
+
+    def dummy_get_stim_value(self) -> float | int:
+        """Function for getting the input stimulation value"""
+        return self._input_val
 
     @staticmethod
     def dummy_set_mux(chnl: int) -> None:

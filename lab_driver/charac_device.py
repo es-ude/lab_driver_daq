@@ -81,6 +81,7 @@ DefaultSettingsDevice = SettingsDevice(
 
 
 class CharacterizationDevice(CharacterizationCommon):
+    _input_val: float
     settings: SettingsDevice
 
     def __init__(self, folder_reference: str) -> None:
@@ -112,6 +113,7 @@ class CharacterizationDevice(CharacterizationCommon):
 
         for rpt_idx in range(self.settings.num_rpt):
             for val_idx, data in enumerate(tqdm(stimuli, ncols=100, desc=f"Process repetition {1 + rpt_idx}/{self.settings.num_rpt}")):
+                self._input_val = data
                 func_daq(data)
 
                 sleep(self.settings.sleep_sec)
