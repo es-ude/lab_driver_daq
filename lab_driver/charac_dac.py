@@ -106,6 +106,10 @@ class CharacterizationDAC(CharacterizationCommon):
 
                 func_beep()
             results.update({f"ch{chnl:02d}": results_ch})
+        for _ in range(4):
+            sleep(0.5)
+            func_beep()
+
         return results
 
     def plot_transient_results(self, data: dict, file_name: str, path: str) -> None:

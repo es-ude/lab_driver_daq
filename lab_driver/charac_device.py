@@ -124,4 +124,8 @@ class CharacterizationDevice(CharacterizationCommon):
 
             func_beep()
             results.update({f"rpt{rpt_idx:02d}": results_ch})
+        for _ in range(4):
+            sleep(0.5)
+            func_beep()
+
         return results
