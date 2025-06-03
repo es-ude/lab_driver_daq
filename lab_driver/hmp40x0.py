@@ -1,13 +1,14 @@
 import numpy as np
-from time import sleep
 import pyvisa
-from logging import getLogger
+from time import sleep
+from logging import getLogger, Logger
 from lab_driver.scan_instruments import scan_instruments
 
 
 class DriverHMP40X0:
     SerialDevice: pyvisa.Resource
     _device_name_chck = "HMP"
+    _logger: Logger
 
     def __init__(self, num_ch: int=4) -> None:
         """Class for Remote Controlling the Power Supply R&S HMP40X0 via USB

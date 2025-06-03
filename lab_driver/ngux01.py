@@ -1,13 +1,14 @@
-from time import sleep, strftime, time_ns
-from logging import getLogger
 import pyvisa
+from time import sleep, strftime, time_ns
+from logging import getLogger, Logger
 from lab_driver.scan_instruments import scan_instruments
 
 
 class DriverNGUX01:
-    """Class for handling the Rohde and Schwarz Sourcemeter NGUX01 in Python"""
     SerialDevice: pyvisa.Resource
     SerialActive = False
+    _logger: Logger
+
     _volt_range = [-20.0, 20.0]
     _curr_range = [-0.1, 0.1]
     _device_name_chck = "NGU"
@@ -15,6 +16,7 @@ class DriverNGUX01:
     _fastlog_finish_timestamp: int = 0
 
     def __init__(self):
+        """Class for handling the Rohde and Schwarz Sourcemeter NGUX01 in Python"""
         self._logger = getLogger(__name__)
 
     def __write_to_dev(self, order: str) -> None:

@@ -1,7 +1,7 @@
-from time import sleep, strftime
-from logging import getLogger
 import pyvisa
 import platform
+from time import sleep, strftime
+from logging import getLogger, Logger
 from RsInstrument import RsInstrument
 from lab_driver.scan_instruments import scan_instruments
 from lab_driver.units import *
@@ -11,6 +11,8 @@ class DriverMXO4X:
     SerialDevice: pyvisa.Resource | RsInstrument
     SerialActive = False
     _device_name_chck = "MXO"
+    _logger: Logger
+
     _gen_index = 1      # which generator to configure if none is explicitly stated
     _logic_group = 1    # which logic group to configure if none is explicitly stated
     _output_config = 1  # which screenshot output configuration to use if none is explicitly stated

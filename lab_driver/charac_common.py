@@ -1,5 +1,5 @@
 import numpy as np
-from logging import getLogger
+from logging import getLogger, Logger
 from os import makedirs
 from os.path import join
 from random import random, randint
@@ -7,6 +7,7 @@ from random import random, randint
 
 class CharacterizationCommon:
     _input_val: float | int
+    _logger: Logger
 
     def __init__(self) -> None:
         """Common class with functions used in all characterisation methods"""

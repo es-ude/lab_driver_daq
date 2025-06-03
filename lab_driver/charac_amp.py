@@ -1,5 +1,5 @@
 import numpy as np
-from logging import getLogger
+from logging import getLogger, Logger
 from tqdm import tqdm
 from time import sleep
 from datetime import datetime
@@ -66,8 +66,9 @@ DefaultSettingsAmplifier = SettingsAmplifier(
 
 
 class CharacterizationAmplifier(CharacterizationCommon):
-    _input_val: float
     settings: SettingsAmplifier
+    _input_val: float
+    _logger: Logger
 
     def __init__(self, folder_reference: str) -> None:
         """Class for handling the measurement routine for characterising a Digital-Analog-Converter (DAC)

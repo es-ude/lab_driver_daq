@@ -1,5 +1,5 @@
 from time import sleep
-from logging import getLogger
+from logging import getLogger, Logger
 import pyvisa
 from lab_driver.scan_instruments import scan_instruments
 
@@ -8,6 +8,7 @@ class DriverDMM6500:
     SerialDevice: pyvisa.Resource
     SerialActive = False
     _device_name_chck = "DMM6500"
+    _logger: Logger
 
     def __init__(self):
         """Class for handling the Keithley Digital Multimeter 6500 in Python"""
@@ -17,7 +18,15 @@ class DriverDMM6500:
         self.SerialDevice.write(order)
 
     def __read_from_dev(self, order: str) -> str:
-        text_out = self.SerialDevice.query(order)
+        num_stop = 100
+        num_trials = 0
+        while (num_trials < num_stop):
+            try:
+                text_out = self.SerialDevice.query(order)
+                num_trials = num_stop
+            except:
+                sleep(0.1)
+                num_trials += 1
         return text_out.strip()
 
     def __init_dev(self, do_reset: bool=True, do_beep: bool=True) -> None:
