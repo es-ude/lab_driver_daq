@@ -35,16 +35,12 @@ class ProcessCommon:
         )['settings'].flatten()[0]
         return {'data': data, 'settings': set}
 
-    def process_data(self, path: str, filename: str) -> dict:
-        """Function for processing the measurement data
-        :param path:        Path to measurement in which the files are inside
-        :param filename:    Name of numpy file with measurement results
+    @staticmethod
+    def process_data_direct(data: dict) -> dict:
+        """Function for processing the measurement data directly
+        :param data:        Dictionary of measurement results
         :return:            Dictionary with ['stim': stimulation input array, 'ch<x>': results with 'mean' and 'std']
         """
-        data = self.load_data(
-            path=path,
-            file_name=filename
-        )['data']
         rslt = {'stim': data['stim']}
 
         keys_test = data.keys()
@@ -58,3 +54,18 @@ class ProcessCommon:
 
         assert len(data) == len(keys_test), "not all data are processed"
         return rslt
+
+    def process_data_from_file(self, path: str, filename: str) -> dict:
+        """Function for processing the measurement data from loading a file
+        :param path:        Path to measurement in which the files are inside
+        :param filename:    Name of numpy file with measurement results
+        :return:            Dictionary with ['stim': stimulation input array, 'ch<x>': results with 'mean' and 'std']
+        """
+        data = self.load_data(
+            path=path,
+            file_name=filename
+        )['data']
+        metric = self.process_data_direct(
+            data=data,
+        )
+        return metric

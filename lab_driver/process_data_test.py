@@ -11,7 +11,7 @@ class TestDataAnalysis(unittest.TestCase):
         path=path2data,
         acronym='dac'
     )
-    trns = hndl.process_data(
+    trns = hndl.process_data_from_file(
         path=path2data,
         filename=ovr[0]
     )

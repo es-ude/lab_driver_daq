@@ -65,13 +65,14 @@ def scale_auto_value(data: np.ndarray | float) -> [float, str]:
 
 def plot_transfer_function_norm(data: dict, path2save: str='',
                                 xlabel: str='Stimulus Input', ylabel: str='Stimulus Output',
-                                title: str='Transfer Function') -> None:
+                                title: str='Transfer Function', file_name: str='') -> None:
     """Function for plotting the transfer function
     :param data:        Dictionary with extracted values from measurement data
     :param path2save:   Path for saving the figure
     :param xlabel:      Text Label for x-axis
     :param ylabel:      Text Label for y-axis
     :param title:       Text Label for title
+    :param file_name:   File name of the saved figure
     :return:            None
     """
     val_input = data['stim']
@@ -100,15 +101,15 @@ def plot_transfer_function_norm(data: dict, path2save: str='',
     plt.legend(loc='upper left')
     plt.grid()
     plt.tight_layout()
-    if path2save:
-        save_figure(plt, path2save, f'{title.lower()}')
+    if path2save and file_name:
+        save_figure(plt, path2save, f'{file_name.lower()}')
 
     plt.show()
 
 
 def plot_transfer_function_metric(data: dict, func: object, path2save: str='',
                                   xlabel: str='Stimulus Input', ylabel: str='Stimulus Output',
-                                  title: str='Transfer Function') -> None:
+                                  title: str='Transfer Function', file_name: str='') -> None:
     """Function for plotting the metric, extracted from the transfer function
     :param data:        Dictionary with pre-processed data from measurement with keys: ['stim', 'ch<x>': {'mean', 'std'}}
     :param func:        Function for calculating the metric
@@ -116,6 +117,7 @@ def plot_transfer_function_metric(data: dict, func: object, path2save: str='',
     :param xlabel:      Text Label for x-axis
     :param ylabel:      Text Label for y-axis
     :param title:       Text Label for title
+    :param file_name:   File name of the saved figure
     :return:            None
     """
     data_lsb = {'stim': data['stim']}
@@ -133,5 +135,6 @@ def plot_transfer_function_metric(data: dict, func: object, path2save: str='',
         path2save=path2save,
         xlabel=xlabel,
         ylabel=ylabel,
-        title=title
+        title=title,
+        file_name=file_name
     )

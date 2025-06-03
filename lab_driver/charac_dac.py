@@ -6,6 +6,8 @@ from datetime import datetime
 from dataclasses import dataclass
 from lab_driver.charac_common import CharacterizationCommon
 from lab_driver.yaml_handler import YamlConfigHandler
+from lab_driver.process_data import ProcessTransferFunction
+from lab_driver.process_plots import plot_transfer_function_norm, plot_transfer_function_metric
 
 
 @dataclass
@@ -105,3 +107,41 @@ class CharacterizationDAC(CharacterizationCommon):
                 func_beep()
             results.update({f"ch{chnl:02d}": results_ch})
         return results
+
+    def plot_transient_results(self, data: dict, file_name: str, path: str) -> None:
+        """Function for plotting the loaded data files
+        :param data:        Dictionary with measurement data ['stim', 'ch<x>', ...]
+        :param file_name:   Name of figure file to save
+        :param path:        Path to measurement in which the figures are saved
+        """
+        hndl = ProcessTransferFunction()
+        self._logger.info('Calculating the metric')
+        metric = hndl.process_data_direct(data)
+
+        self._logger.info('Plotting the signals')
+        plot_transfer_function_norm(
+            data=data,
+            path2save=path,
+            xlabel='Applied DAC data',
+            ylabel='DAC Output Voltage [V]',
+            title='',
+            file_name=file_name
+        )
+        plot_transfer_function_metric(
+            data=metric,
+            func=hndl.calculate_lsb,
+            path2save=path,
+            xlabel='Applied DAC data',
+            ylabel='DAC Output LSB [V]',
+            title='',
+            file_name=file_name
+        )
+        plot_transfer_function_metric(
+            data=metric,
+            func=hndl.calculate_dnl,
+            path2save=path,
+            xlabel='Applied DAC data',
+            ylabel='DAC DNL',
+            title='',
+            file_name=file_name
+        )
