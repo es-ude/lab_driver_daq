@@ -253,6 +253,59 @@ class DriverRTM3004(DriverMXO4X):
         self.gen_amplitude(1)
         self.scale_horizontal(5e-7)
         self.scale_vertical(.5)
+
+    def dig_technology(self, tech: str, logic_channel: int) -> bool:
+        """Select threshold voltage for various types of circuits and apply it to the whole
+        channel group the indicated logic channel belongs to
+        Args:
+            tech: "TTL" (1.4 V), "ECL" (-1.3 V), "CMOS" (2.5 V) or "MAN"/"MANUAL"
+            logic_channel: 0..15
+        Returns:
+            True if tech is or logic channel invalid   
+        """
+        valid_techs = ("TTL", "ECL", "CMOS", "MAN", "MANUAL")
+        if tech not in valid_techs or logic_channel not in range(16):
+            return True
+        self.__write_to_dev(f"DIG{logic_channel}:TECH {tech}")
+        return False
+    
+    def dig_threshold(self, threshold: float, logic_channel: int) -> bool:
+        """Set logical threshold for the nibble (D0...D3, D4...D7, D8...D11, and D12...D15)
+        to which the logic channel belongs
+        Args:
+            threshold: Threshold level in volts
+            logic_channel: 0..15
+        Returns:
+            True if logic channel is invalid
+        """
+        if logic_channel not in range(16):
+            return True
+        self.__write_to_dev(f"DIG{logic_channel}:THR {threshold}")
+        return False
+    
+    def dig_enable(self, pod: int):
+        """Enable a logic pod
+        Args:
+            pod: 1 or 2 for the corresponding logic pod
+        Returns:
+            True if pod number is invalid
+        """
+        if pod not in (1,2):
+            return True
+        self.__write_to_dev(f"LOG{pod}:STAT 1")
+        return False
+    
+    def dig_disable(self, pod: int):
+        """Disable a logic pod
+        Args:
+            pod: 1 or 2 for the corresponding logic pod
+        Returns:
+            True if pod number is invalid
+        """
+        if pod not in (1,2):
+            return True
+        self.__write_to_dev(f"LOG{pod}:STAT 0")
+        return False
     
     def trig_event_mode(self, sequence: bool) -> None:
         """Select whether to trigger on a single event or a sequence of A and B events.
