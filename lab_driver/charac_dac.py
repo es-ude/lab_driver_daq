@@ -1,4 +1,5 @@
 import numpy as np
+from os.path import splitext
 from logging import getLogger, Logger
 from tqdm import tqdm
 from time import sleep
@@ -123,12 +124,11 @@ class CharacterizationDAC(CharacterizationCommon):
         data = hndl.load_data(
             path=path,
             file_name=file_name
-        )
+        )['data']
         self._logger.info('Calculating the metric')
         metric = hndl.process_data_direct(data)
 
         self.__plot_characteristic(
-            data=data,
             metric=metric,
             path2save=path,
             file_name=file_name
@@ -145,23 +145,23 @@ class CharacterizationDAC(CharacterizationCommon):
         self._logger.info('Calculating the metric')
         metric = hndl.process_data_direct(data)
         self.__plot_characteristic(
-            data=data,
             metric=metric,
             path2save=path,
             file_name=file_name
         )
 
-    def __plot_characteristic(self, data: dict, metric: dict, path2save: str, file_name: str) -> None:
+    def __plot_characteristic(self, metric: dict, path2save: str, file_name: str) -> None:
         self._logger.info('Plotting the signals')
         hndl = ProcessTransferFunction()
+        file_name_wo_ext = splitext(file_name)[0]
 
         plot_transfer_function_norm(
-            data=data,
+            data=metric,
             path2save=path2save,
             xlabel='Applied DAC data',
             ylabel='DAC Output Voltage [V]',
             title='',
-            file_name=file_name
+            file_name=f"{file_name_wo_ext}_norm"
         )
         plot_transfer_function_metric(
             data=metric,
@@ -170,7 +170,7 @@ class CharacterizationDAC(CharacterizationCommon):
             xlabel='Applied DAC data',
             ylabel='DAC Output LSB [V]',
             title='',
-            file_name=file_name
+            file_name=f"{file_name_wo_ext}_lsb"
         )
         plot_transfer_function_metric(
             data=metric,
@@ -179,5 +179,5 @@ class CharacterizationDAC(CharacterizationCommon):
             xlabel='Applied DAC data',
             ylabel='DAC DNL',
             title='',
-            file_name=file_name
+            file_name=f"{file_name_wo_ext}_dnl"
         )
