@@ -1,4 +1,5 @@
 import pyvisa
+from platform import system
 from time import sleep, strftime, time_ns
 from logging import getLogger, Logger
 from lab_driver.scan_instruments import scan_instruments
@@ -62,22 +63,33 @@ class DriverNGUX01:
         self.__write_to_dev("*WAI")
         self.SerialDevice.timeout = backup_timeout
 
-    def serial_open_known_target(self, resource_name: str, do_reset=False) -> None:
+    def serial_open_known_target(self, resource_name: str, do_reset: bool=False) -> None:
         """Open the serial connection to device"""
         rm = pyvisa.ResourceManager()
         self.SerialDevice = rm.open_resource(resource_name)
 
-        self.__do_check_idn()
+        try:
+            self.__do_check_idn()
+        except:
+            raise RuntimeError('Device not connected or USB class of NGU is not TMC (set per menu -> Interfaces -> USB class)')
         self.__init_dev(do_reset)
 
-    def serial_start(self, do_reset=False) -> None:
+    def serial_start(self, do_reset: bool=False) -> None:
         """Open the serial connection to device"""
         list_dev = scan_instruments()
-        rm = pyvisa.ResourceManager("/usr/lib/librsvisa.so@ivi")
+        if system() == "Linux":
+            rm = pyvisa.ResourceManager("/usr/lib/librsvisa.so@ivi")
+        else:
+            rm = pyvisa.ResourceManager()
 
         for inst_name in list_dev:
             self.SerialDevice = rm.open_resource(inst_name)
-            self.__do_check_idn()
+            try:
+                self.__do_check_idn()
+            except:
+                raise RuntimeError(
+                    'Device not connected or USB class of NGU is not TMC (set per menu -> Interfaces -> USB class)')
+
             if self.SerialActive:
                 break
             else:
@@ -235,7 +247,7 @@ class DriverNGUX01:
                 str_out = 'SOUR'
             self.__write_to_dev(f"OUTP:MODE {str_out}")
 
-    def output_activate(self, use_fast_output=False) -> None:
+    def output_activate(self, use_fast_output: bool=False) -> None:
         """Activating the output
         Args:
             use_fast_output: (De-)Activate fast transient response
@@ -265,7 +277,7 @@ class DriverNGUX01:
             self.__write_to_dev(f"OUTP:GEN 0")
             sleep(0.5)
 
-    def get_measurement_voltage(self, do_print=True) -> float:
+    def get_measurement_voltage(self, do_print: bool=False) -> float:
         """Reading the voltage
         Args:
             do_print: Also print the voltage value to stdout
@@ -281,7 +293,7 @@ class DriverNGUX01:
                 print(f"... meas. voltage: {val:.6f} V")
             return val
 
-    def get_measurement_current(self, do_print=True) -> float:
+    def get_measurement_current(self, do_print: bool=False) -> float:
         """Reading the current
         Args:
             do_print: Also print the current value to stdout
@@ -297,7 +309,7 @@ class DriverNGUX01:
                 print(f"... meas. current: {1e3 * val:.6f} mA")
             return val
 
-    def get_measurement_power(self, do_print=True) -> float:
+    def get_measurement_power(self, do_print: bool=False) -> float:
         """Reading the power
         Args:
             do_print: Also print the power value to stdout
@@ -313,7 +325,7 @@ class DriverNGUX01:
                 print(f"... meas. power: {1e3 * val:.6f} mW")
             return val
 
-    def get_measurement_energy(self, do_print=True) -> float:
+    def get_measurement_energy(self, do_print: bool=False) -> float:
         """Reading the energy
         Args:
             do_print: Also print the energy value to stdout
