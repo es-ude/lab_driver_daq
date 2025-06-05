@@ -7,7 +7,7 @@ from datetime import datetime
 from dataclasses import dataclass
 from lab_driver.yaml_handler import YamlConfigHandler
 from lab_driver.charac_common import CharacterizationCommon
-from lab_driver.process_data import ProcessTransferFunction
+from lab_driver.process_data import MetricCalculator
 from lab_driver.process_plots import plot_transfer_function_norm, plot_transfer_function_metric
 
 
@@ -136,7 +136,7 @@ class CharacterizationADC(CharacterizationCommon):
         :param file_name:   Name of numpy array with DAQ results to load
         :return:            None
         """
-        hndl = ProcessTransferFunction()
+        hndl = MetricCalculator()
         self._logger.info('Loading the data file')
         data = hndl.load_data(
             path=path,
@@ -158,7 +158,7 @@ class CharacterizationADC(CharacterizationCommon):
         :param file_name:   Name of figure file to save
         :return:            None
         """
-        hndl = ProcessTransferFunction()
+        hndl = MetricCalculator()
         self._logger.info('Calculating the metric')
         metric = hndl.process_data_direct(data)
         self.__plot_characteristic(
@@ -169,7 +169,7 @@ class CharacterizationADC(CharacterizationCommon):
 
     def __plot_characteristic(self, metric: dict, path2save: str, file_name: str) -> None:
         self._logger.info('Plotting the signals')
-        hndl = ProcessTransferFunction()
+        hndl = MetricCalculator()
         file_name_wo_ext = splitext(file_name)[0]
 
         xtext = r'Voltage $V_{in}$ [V]'
