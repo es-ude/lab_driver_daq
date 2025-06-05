@@ -13,6 +13,7 @@ from lab_driver.yaml_handler import YamlConfigHandler
 class SettingsDevice:
     """Class with settings for testing the electrical device (DUT)
     Attributes:
+        system_id:      String with system name or ID
         vss:            Floating with minimal applied voltage
         vdd:            Floating with maximal applied voltage
         test_rang:      List with [min, max] analog ranges for testing the N-bit ADC (like: [0, 65535])
@@ -21,6 +22,7 @@ class SettingsDevice:
         delta_steps:    Float of intermediate steps in changing values
         sleep_sec:      Sleeping seconds between each DAQ setting
     """
+    system_id: str
     vss: float
     vdd: float
     test_rang: list
@@ -70,6 +72,7 @@ class SettingsDevice:
 
 
 DefaultSettingsDevice = SettingsDevice(
+    system_id='0',
     vss=0.0,
     vdd=5.0,
     test_rang=[0.0, 5.0],

@@ -6,6 +6,7 @@ from lab_driver.charac_amp import SettingsAmplifier, CharacterizationAmplifier
 
 
 settings = SettingsAmplifier(
+    system_id='0',
     vss=-5.0,
     vdd=5.0,
     test_rang=[0.0, 5.0],

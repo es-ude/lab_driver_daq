@@ -15,6 +15,7 @@ from lab_driver.process_plots import plot_transfer_function_norm, plot_transfer_
 class SettingsADC:
     """Class with settings for testing the DUT of Analog-Digital-Converter (ADC)
     Attributes:
+        system_id:      String with system name or ID
         voltage_min:    Floating with minimal ADC voltage
         voltage_max:    Floating with maximal ADC voltage
         adc_reso:       Integer with bit resolution of ADC
@@ -24,6 +25,7 @@ class SettingsADC:
         num_rpt:        Integer of completes cycles to run DAQ
         sleep_sec:      Sleeping seconds between each DAQ setting
     """
+    system_id: str
     voltage_min: float
     voltage_max: float
     adc_reso: int
@@ -62,6 +64,7 @@ class SettingsADC:
 
 
 DefaultSettingsADC = SettingsADC(
+    system_id='0',
     voltage_min=0.0,
     voltage_max=5.0,
     adc_reso=16,

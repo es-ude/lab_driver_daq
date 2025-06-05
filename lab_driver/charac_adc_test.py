@@ -6,6 +6,7 @@ from lab_driver.charac_adc import SettingsADC, CharacterizationADC
 
 
 settings = SettingsADC(
+    system_id='0',
     voltage_min=-5.0,
     voltage_max=5.0,
     adc_reso=16,

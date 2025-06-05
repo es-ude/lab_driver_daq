@@ -15,6 +15,7 @@ from lab_driver.process_plots import plot_transfer_function_norm, plot_transfer_
 class SettingsDAC:
     """Class with settings for testing the DUT of Digital-Analog-Converter (DAC)
     Attributes:
+        system_id:      String with system name or ID
         dac_reso:   Integer with bit resolution of DAC
         dac_chnl:   List with DAC channel IDs to test (like: [idx for idx in range (16)])
         dac_rang:   List with [min, max] digital ranges for testing the N-bit DAC (like: [0, 65535])
@@ -23,6 +24,7 @@ class SettingsDAC:
         num_steps:  Integer of intermediate steps in ramping
         sleep_sec:  Sleeping seconds between each DAQ setting
     """
+    system_id: str
     dac_reso: int
     dac_chnl: list
     dac_rang: list
@@ -53,6 +55,7 @@ class SettingsDAC:
 
 
 DefaultSettingsDAC = SettingsDAC(
+    system_id='0',
     dac_reso=16,
     dac_chnl=[idx for idx in range(16)],
     dac_rang=[0, 2**16-1],

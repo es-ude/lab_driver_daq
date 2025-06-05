@@ -6,6 +6,7 @@ from lab_driver.charac_dac import SettingsDAC, CharacterizationDAC
 
 
 settings = SettingsDAC(
+    system_id='0',
     dac_reso=16,
     dac_chnl=[idx for idx in range(4)],
     dac_rang=[0, 2**16-1],
