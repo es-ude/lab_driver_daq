@@ -5,8 +5,8 @@ from tqdm import tqdm
 from time import sleep
 from datetime import datetime
 from dataclasses import dataclass
-from lab_driver.charac_common import CharacterizationCommon
 from lab_driver.yaml_handler import YamlConfigHandler
+from lab_driver.charac_common import CharacterizationCommon
 from lab_driver.process_data import ProcessTransferFunction
 from lab_driver.process_plots import plot_transfer_function_norm, plot_transfer_function_metric
 
