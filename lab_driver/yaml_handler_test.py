@@ -1,7 +1,8 @@
 import unittest
 from os.path import join, exists
 from dataclasses import dataclass
-from lab_driver.yaml_handler import get_repo_name, YamlConfigHandler, get_path_to_project
+from lab_driver.yaml_handler import YamlConfigHandler
+from lab_driver import get_repo_name, get_path_to_project
 
 
 @dataclass
@@ -67,7 +68,7 @@ class TestYamlHandler(unittest.TestCase):
         self.assertTrue(DefaultSettingsTest == class_out)
 
     def test_yaml_read(self):
-        data_rd = self.dummy0.read_yaml_to_dict()
+        data_rd = self.dummy0.get_dict()
         self.assertTrue(data_wr == data_rd)
 
 

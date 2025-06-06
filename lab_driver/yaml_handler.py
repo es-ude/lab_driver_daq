@@ -1,43 +1,15 @@
 import yaml
-from logging import getLogger
-from pathlib import Path
+from logging import getLogger, Logger
 from typing import Any
-from os import makedirs, getcwd
-from os.path import join, exists, abspath, dirname
-
-
-logger = getLogger(__name__)
-
-
-def get_repo_name() -> str:
-    """Getting string with repo name"""
-    import lab_driver
-    path_to_import = dirname(lab_driver.__file__)
-    return Path(path_to_import).parts[-2]
-
-
-def get_path_to_project(new_folder: str='', folder_ref: str='') -> str:
-    """Function for getting the path to find the project folder structure.
-    :param new_folder:      New folder path (optional)
-    :param folder_ref:      String with folder reference to start
-    :return:                String of absolute path to start the project structure
-    """
-    if get_repo_name() in getcwd() and not folder_ref:
-        import lab_driver as ref
-        path_to_import = dirname(ref.__file__)
-        path_split = Path(path_to_import).parts[:-1]
-        path_to_proj = join(*[path_seg for path_seg in path_split], new_folder)
-    else:
-        path_to_import = join(getcwd().split(folder_ref)[0], folder_ref) if folder_ref else getcwd()
-        path_to_proj = join(path_to_import, new_folder)
-    logger.debug(f"Project start at: {path_to_proj}")
-    return abspath(path_to_proj)
+from os import makedirs
+from os.path import join, exists
+from lab_driver import get_path_to_project
 
 
 class YamlConfigHandler:
     __path2yaml_folder: str
     __yaml_name: str
-    _data: dict
+    __logger: Logger = getLogger(__name__)
 
     @property
     def path2chck(self) -> str:
@@ -52,18 +24,15 @@ class YamlConfigHandler:
             yaml_name:          String with name of the YAML file [Default: 'Config_Train']
             folder_reference:   String with folder reference to start
         """
-        self.__logger = getLogger(__name__)
         self.__path2yaml_folder = join(get_path_to_project(folder_ref=folder_reference), path2yaml)
         self.__yaml_name = self.__remove_ending_from_filename(yaml_name)
+        self._template = yaml_template
 
         makedirs(self.__path2yaml_folder, exist_ok=True)
         if not exists(self.path2chck):
             data2yaml = yaml_template if isinstance(yaml_template, dict) else self.translate_dataclass_to_dict(yaml_template)
             self.write_dict_to_yaml(data2yaml)
             self.__logger.info("... created new yaml file in folder!")
-
-        self._data = self.read_yaml_to_dict()
-        self.__check_scheme_validation(yaml_template, self._data)
 
     @staticmethod
     def __remove_ending_from_filename(file_name: str) -> str:
@@ -79,6 +48,12 @@ class YamlConfigHandler:
                 yaml_file_name = yaml_file_name.split(yaml_end)[0]
                 break
         return yaml_file_name
+
+    @staticmethod
+    def translate_dataclass_to_dict(class_content: type) -> dict:
+        """Translating all class variables with default values into dict"""
+        return {key: value for key, value in class_content.__dict__.items()
+                if not key.startswith('__') and not callable(key)}
 
     def __check_scheme_validation(self, template: type | dict, real_file: type | dict) -> bool:
         """Function for validating the key entries from template yaml and real yaml file
@@ -96,27 +71,6 @@ class YamlConfigHandler:
         else:
             return template_used.keys() == real_used.keys()
 
-    def list_keys(self) -> None:
-        """Printing all keys and values of available content in dict"""
-        print("\nPrinting the keys and values of existing data")
-        print("=======================================================")
-        for key in self._data.keys():
-            print(f"{key}: {self._data[key]}")
-        print("\n")
-
-    def get_value(self, param: str):
-        """Getting the content of a specific key input
-        Args:
-            param:  String with the input
-        Returns:
-            Value to corresponding key entry
-        """
-        return self._data[param]
-
-    def get_class(self, class_constructor: type):
-        """Getting all key inputs from yaml dictionary to a class"""
-        return class_constructor(**self._data)
-
     def write_dict_to_yaml(self, config_data: dict, print_output: bool=False) -> None:
         """Writing list with configuration sets to YAML file
         Args:
@@ -132,10 +86,14 @@ class YamlConfigHandler:
         if print_output:
             print(yaml.dump(config_data, sort_keys=False))
 
-    def read_yaml_to_dict(self, print_output: bool=False) -> dict:
+    def get_class(self, class_constructor: type):
+        """Getting all key inputs from yaml dictionary to a class"""
+        data = self.get_dict()
+        self.__check_scheme_validation(self._template, data)
+        return class_constructor(**data)
+
+    def get_dict(self) -> dict:
         """Writing list with configuration sets to YAML file
-        Args:
-            print_output:   Printing the data in YAML format
         Returns:
             Dict. with configuration
         """
@@ -147,13 +105,4 @@ class YamlConfigHandler:
                 config_data = yaml.safe_load(f)
             self.__logger.debug(f"... read YAML file: {self.path2chck}")
 
-            # --- Printing output
-            if print_output:
-                print(yaml.dump(config_data, sort_keys=False))
             return config_data
-
-    @staticmethod
-    def translate_dataclass_to_dict(class_content: type) -> dict:
-        """Translating all class variables with default values into dict"""
-        return {key: value for key, value in class_content.__dict__.items()
-                if not key.startswith('__') and not callable(key)}

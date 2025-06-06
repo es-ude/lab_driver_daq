@@ -52,8 +52,6 @@ html_show_sourcelink = False
 html_theme = "pydata_sphinx_theme"
 html_theme_options = {
     "content_footer_items": ["last-updated"],
-    "repository_url": "https://github.com/es-ude/lab_driver_daq/",
-    "path_to_docs": "docs",
     "navigation_depth": 4,
     "icon_links": [
         {

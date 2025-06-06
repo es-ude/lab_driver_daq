@@ -12,3 +12,4 @@ docs/apidocs
 **/*.lock
 **/*.log
 **/*.yaml
+.python-version
