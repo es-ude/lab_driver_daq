@@ -308,10 +308,20 @@ class DriverRTM3004(DriverMXO4X):
         return False
     
     def dig_hysteresis(self, level, logic_channel: int) -> bool:
+        """Defines the level of the hysteresis to avoid the change of signal states due to noise.
+        The setting applies to the logic pod to which the indicated logic channel belongs.
+        Args:
+            level: "SMALL", "MEDIUM", "LARGE" (case-insensitive) or 0, 1, 2 respectively.
+            logic_channel: 0..15
+        Returns:
+            True if hysteresis level or logic channel is invalid
+        """
         if type(level) is str and level.upper() not in ("SMALL", "MEDIUM", "LARGE"):
             return True
-        if level not in range(3) or logic_channel not in range(16):
+        if type(level) is int and (level not in range(3) or logic_channel not in range(16)):
             return True
+        if type(level) == int:
+            level = ("SMALL", "MEDIUM", "LARGE")[level]
         self.__write_to_dev(f"DIG{logic_channel}:HYST {level}")
         return False
     
