@@ -307,6 +307,14 @@ class DriverRTM3004(DriverMXO4X):
         self.__write_to_dev(f"LOG{pod}:STAT 0")
         return False
     
+    def dig_hysteresis(self, level, logic_channel: int) -> bool:
+        if type(level) is str and level.upper() not in ("SMALL", "MEDIUM", "LARGE"):
+            return True
+        if level not in range(3) or logic_channel not in range(16):
+            return True
+        self.__write_to_dev(f"DIG{logic_channel}:HYST {level}")
+        return False
+    
     def trig_event_mode(self, sequence: bool) -> None:
         """Select whether to trigger on a single event or a sequence of A and B events.
         Args:
