@@ -1,5 +1,6 @@
 from time import sleep
-from lab_driver import DriverMXO4X, KHz, MHz
+from lab_driver import DriverMXO4X
+from lab_driver.units import KHz, MHz
 
 
 if __name__ == '__main__':
@@ -10,7 +11,7 @@ if __name__ == '__main__':
     mx.set_display_activation(True)
     mx.set_static_display_text("Hello World!")
     
-    # Generate a sine wave whose frequency grows exponentially
+    # Generate a sine wave with exponentially increasing frequency
     freq = 10 * KHz
     mx.gen_function("SINE")
     mx.gen_frequency(freq)
