@@ -79,7 +79,7 @@ class DriverHMP40X0:
 
     def serial_open(self, do_reset=False) -> None:
         """Open the serial connection to device"""
-        list_dev = scan_instruments(do_print=False)
+        list_dev = scan_instruments()
         rm = pyvisa.ResourceManager()
 
         # --- Checking if device address is right

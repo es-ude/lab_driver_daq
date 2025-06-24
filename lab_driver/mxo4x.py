@@ -179,7 +179,7 @@ class DriverMXO4X:
             self.serial_open_known_target("USB0::0x0AAD::0x0197::1335.5050k04-201451::INSTR", do_reset)
             return
 
-        list_dev = scan_instruments(do_print=False)
+        list_dev = scan_instruments()
         rm = pyvisa.ResourceManager(self._visa_lib)
 
         # --- Checking if device address is right
