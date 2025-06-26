@@ -40,6 +40,16 @@ and check if the device is listed
 7. Crucial: *Open* pyvisa ResourceManager with @py backend instead of IVI-VISA, but let IVI
 *scan* for devices beforehand!
 
+### Raspberry Pi Setup
+1. Go to https://www.rohde-schwarz.com/ch/applikationen/r-s-visa-application-note_56280-148812.html and install the VISA setup for Raspbian
+2. Create then start a virtual environment in the project directory
+
+   `python -m venv venv`
+
+   `source venv/bin/activate`
+3. Ensure `setup.py` exists in the project root directory and install via pip `pip install -e .`
+4. Run the examples to ensure everything works fine, install missing packages manually with pip if not
+
 ## Notes / Errors for using the lab devices
 ### NGU411 FastLog
 FastLog dumps a binary file of its measurements on the USB stick. This binary
