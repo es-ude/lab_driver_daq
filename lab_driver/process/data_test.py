@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from lab_driver import get_path_to_project
-from lab_driver.process_data import MetricCalculator
+from lab_driver.process.data import MetricCalculator, do_fft, calculate_total_harmonics_distortion, calculate_total_harmonics_distortion_from_transient
 
 
 class TestDataAnalysis(unittest.TestCase):
@@ -166,6 +166,35 @@ class TestDataAnalysis(unittest.TestCase):
             y_true=np.sin(2 * np.pi * 100 * t),
         )
         self.assertEqual(rslt, -4.439780764141639e-17)
+
+    def test_metric_thd_one_harmonic_tran(self):
+        sampling_rate = 1000
+        t = np.linspace(0, 1, sampling_rate, endpoint=True)
+        signal = np.sin(2 * np.pi * 50 * t) + 0.1 * np.sin(2 * np.pi * 100 * t) + 0.05 * np.sin(2 * np.pi * 150 * t)
+
+        rslt = calculate_total_harmonics_distortion_from_transient(
+            signal=signal,
+            fs=sampling_rate,
+            N_harmonics=1
+        )
+        self.assertEqual(rslt, -20.067970271376048)
+
+    def test_metric_thd_one_harmonic_spec(self):
+        sampling_rate = 1000
+        t = np.linspace(0, 1, sampling_rate, endpoint=True)
+        signal = np.sin(2 * np.pi * 50 * t) + 0.1 * np.sin(2 * np.pi * 100 * t) + 0.05 * np.sin(2 * np.pi * 150 * t)
+
+        freq, spec = do_fft(
+            y=signal,
+            fs=sampling_rate,
+        )
+
+        rslt = calculate_total_harmonics_distortion(
+            freq=freq,
+            spectral=spec,
+            N_harmonics=2
+        )
+        self.assertEqual(rslt, -19.118108722018935)
 
 
 if __name__ == "__main__":
