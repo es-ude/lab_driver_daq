@@ -3,6 +3,8 @@ from os import makedirs
 from os.path import join
 from matplotlib import pyplot as plt
 
+from lab_driver.process.data import calculate_total_harmonics_distortion
+
 
 def get_plot_color(idx: int) -> str:
     """Getting the color string"""
@@ -65,7 +67,7 @@ def scale_auto_value(data: np.ndarray | float) -> [float, str]:
 
 def plot_transfer_function_norm(data: dict, path2save: str='',
                                 xlabel: str='Stimulus Input', ylabel: str='Stimulus Output',
-                                title: str='Transfer Function', file_name: str='') -> None:
+                                title: str='Transfer Function', file_name: str='', show_plot: bool=True) -> None:
     """Function for plotting the transfer function
     :param data:        Dictionary with extracted values from measurement data
     :param path2save:   Path for saving the figure
@@ -73,6 +75,7 @@ def plot_transfer_function_norm(data: dict, path2save: str='',
     :param ylabel:      Text Label for y-axis
     :param title:       Text Label for title
     :param file_name:   File name of the saved figure
+    :param show_plot:   Boolean for showing the plot
     :return:            None
     """
     val_input = data['stim']
@@ -103,8 +106,8 @@ def plot_transfer_function_norm(data: dict, path2save: str='',
     plt.tight_layout()
     if path2save and file_name:
         save_figure(plt, path2save, f'{file_name.lower()}')
-
-    plt.show()
+    if show_plot:
+        plt.show(block=True)
 
 
 def plot_transfer_function_metric(data: dict, func: object, path2save: str='',
@@ -120,21 +123,87 @@ def plot_transfer_function_metric(data: dict, func: object, path2save: str='',
     :param file_name:   File name of the saved figure
     :return:            None
     """
-    data_lsb = {'stim': data['stim']}
+    data_metric = {'stim': data['stim']}
     for key in data.keys():
         if not key == 'stim':
             scale_val = 1.0
             metric = func(data['stim'], data[key]['mean'])
             if not metric.size == data['stim'].size:
                 metric = np.concatenate((np.array((metric[0], )), metric), axis=0)
-            data_lsb.update({key: {'mean': metric,
+            data_metric.update({key: {'mean': metric,
                                    'std': scale_val * data[key]['std']}})
 
     plot_transfer_function_norm(
-        data=data_lsb,
+        data=data_metric,
         path2save=path2save,
         xlabel=xlabel,
         ylabel=ylabel,
         title=title,
         file_name=file_name
     )
+
+
+def plot_spectral_data(data: dict, show_peaks: bool=True, show_plot: bool=True, N_harmonics: int=6, path2save: str='') -> None:
+    """Plotting the spectral data, measured with R&S MXO44
+    :param data:        Dictionary with spectral data from measurement
+    :param show_peaks:  Boolean for highlighting the harmonics
+    :param show_plot:   Boolean for showing the plot
+    :param N_harmonics: Number of harmonics for calculation and plot
+    :param path2save:   Path for saving the figure
+    """
+    assert [key for key in data.keys()] == ['f', 'Y']
+    deltax = 20
+    # --- Plotten
+    scalex = 1e-3
+    plt.figure()
+    plt.plot(scalex * data['f'], data['Y'], color='k')
+    if show_peaks:
+        f_zero = data['f'][data['Y'].argmax()]
+        xharm = [np.argwhere(data['f'] >= f_zero * (1+ite)).flatten()[0] for ite in range(1+N_harmonics)]
+        for idx, xpos in enumerate(xharm):
+            xval = np.linspace(start=xpos-deltax, stop=xpos+deltax, endpoint=False, num=2*deltax, dtype=int)
+            plt.plot(scalex * data['f'][xval], data['Y'][xval], color='r' if idx == 0 else 'b')
+
+    plt.xlim([data['f'][0] * scalex, data['f'][-1] * scalex])
+    plt.xticks(ticks=np.round(np.linspace(data['f'][0], data['f'][-1], 9, dtype=float) * scalex, 1))
+    plt.xlabel(r'Frequency $f$ [kHz]')
+    plt.ylabel(r'Spectral Amplitude $\hat{Y}(f)$ [dB]')
+
+    thd = calculate_total_harmonics_distortion(
+        freq=data['f'],
+        spectral=10 ** (data['Y'] / 20),
+        N_harmonics=N_harmonics
+    )
+    plt.title(f'THD = {thd:.2f} dB')
+    plt.grid()
+    plt.tight_layout()
+
+    if path2save:
+        save_figure(plt, path2save, f'spectral_thd')
+    if show_plot:
+        plt.show(block=True)
+
+
+def plot_fra_data(data: dict, show_plot: bool=True, path2save: str='') -> None:
+    """Plotting the data from Frequency Response Analysis (FRA) using R&S MXO44
+    :param data:        Dictionary with measured data from device
+    :param show_plot:   Boolean for showing the plot
+    :param path2save:   Path for saving the figure
+    """
+    assert [key for key in data.keys()] == ['f', 'gain', 'phase']
+    fig, ax1 = plt.subplots()
+    ax1.semilogx(data['f'], data['gain'], color='k', marker='.', markersize=6)
+
+    ax1.set_xlim([data['f'][0], data['f'][-1]])
+    ax1.set_xlabel(r'Frequency $f$ [Hz]')
+    ax1.set_ylabel(r'Gain $|H(f)|$ [dB]', color='k')
+
+    ax2 = ax1.twinx()
+    ax2.semilogx(data['f'], data['phase'], color='r', marker='.', markersize=6)
+    ax2.set_ylabel(r'Phase $\alpha$ [°]', color='r')
+    plt.tight_layout()
+
+    if path2save:
+        save_figure(plt, path2save, f'fra_bode')
+    if show_plot:
+        plt.show(block=True)
