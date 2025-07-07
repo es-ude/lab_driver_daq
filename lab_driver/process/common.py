@@ -65,9 +65,4 @@ class ProcessCommon:
             path=path,
             file_name=filename
         )['data']
-        metric = self.process_data_direct(
-            data=data,
-        )
-        return metric
-
-
+        return self.process_data_direct(data=data)

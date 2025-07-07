@@ -1,4 +1,3 @@
-from lab_driver.driver.dmm6500 import DriverDMM6500
 from .scan_instruments import scan_instruments
 
 
