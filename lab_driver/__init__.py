@@ -35,3 +35,21 @@ def get_path_to_project(new_folder: str='', folder_ref: str='') -> str:
         path_to_import = join(getcwd().split(folder_ref)[0], folder_ref) if folder_ref else getcwd()
         path_to_proj = join(path_to_import, new_folder)
     return abspath(path_to_proj)
+
+
+def init_project_folder(new_folder: str='') -> None:
+    """Generating folder structure in first run
+    :param new_folder:      Name of the new folder to create (test case)
+    :return:                None
+    """
+    from os import makedirs
+    from os.path import join
+
+    folder_structure = ['runs', 'config']
+    copy_files = {}
+
+    path2start = join(get_path_to_project(), new_folder)
+    makedirs(path2start, exist_ok=True)
+
+    for folder_name in folder_structure:
+        makedirs(join(path2start, folder_name), exist_ok=True)

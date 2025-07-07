@@ -4,18 +4,19 @@ from tqdm import tqdm
 from time import sleep
 from datetime import datetime
 from dataclasses import dataclass
-from lab_driver.charac_common import CharacterizationCommon
+
+from lab_driver.charac.common import CharacterizationCommon
 from lab_driver.yaml_handler import YamlConfigHandler
 
 
 @dataclass
-class SettingsAmplifier:
-    """Class with settings for testing an electrical amplifier stage (DUT)
+class SettingsDevice:
+    """Class with settings for testing the electrical device (DUT)
     Attributes:
         system_id:      String with system name or ID
         vss:            Floating with minimal applied voltage
         vdd:            Floating with maximal applied voltage
-        test_rang:      List with [min, max] analog ranges for amplifier (like: [-5.0, +5.0])
+        test_rang:      List with [min, max] analog ranges for testing the N-bit ADC (like: [0, 65535])
         daq_ovr:        Integer number for oversampling of DAQ system
         num_rpt:        Integer of completes cycles to run DAQ
         delta_steps:    Float of intermediate steps in changing values
@@ -47,16 +48,30 @@ class SettingsAmplifier:
         assert self.vdd > self.test_rang[0] and self.vdd >= self.test_rang[1], "Variable: vdd must be greater than test_rang"
         return int((self.test_rang[1] - self.test_rang[0]) / self.delta_steps) + 1
 
-    def get_cycle_stimuli_input(self) -> np.ndarray:
+    def get_cycle_stimuli_input_sawtooth(self) -> np.ndarray:
+        """Getting the numpy array with a stimuli with sawtooth waveform"""
         return np.linspace(start=self.test_rang[0], stop=self.test_rang[1], num=self.get_num_steps(), endpoint=True, dtype=float)
+
+    def get_cycle_stimuli_input_sinusoidal(self) -> np.ndarray:
+        """Getting the numpy array with a stimuli input with sinusoidal waveform"""
+        time = np.linspace(start=0.0, stop=2 * np.pi, num=2+self.get_num_steps(), endpoint=True, dtype=float)
+        vcm = (self.test_rang[1] + self.test_rang[0]) / 2
+        return vcm + (self.test_rang[1] - vcm) * np.sin(time)
+
+    def get_cycle_stimuli_input_triangular(self) -> np.ndarray:
+        """Getting the numpy array with a stimuli input with triangular waveform"""
+        ramp = np.linspace(start=0.0, stop=1.0, num=1+int(np.ceil((self.get_num_steps()-1)/4)), endpoint=True, dtype=float)
+        sig = np.concatenate((ramp, np.flip(ramp[:-1]), -ramp[1:], -np.flip(ramp[:-1])), axis=0)
+        vcm = (self.test_rang[1] + self.test_rang[0]) / 2
+        return vcm + (self.test_rang[1] - vcm) * sig
 
     def get_cycle_empty_array(self) -> np.ndarray:
         """Function for generating an empty numpy array with right size"""
         assert self.daq_ovr > 0, "Variable: daq_ovr - Must be greater than 1"
-        return np.zeros(shape=(self.num_rpt, self.get_cycle_stimuli_input().size, self.daq_ovr), dtype=float)
+        return np.zeros(shape=(self.num_rpt, self.get_num_steps(), self.daq_ovr), dtype=float)
 
 
-DefaultSettingsAmplifier = SettingsAmplifier(
+DefaultSettingsDevice = SettingsDevice(
     system_id='0',
     vss=0.0,
     vdd=5.0,
@@ -68,49 +83,47 @@ DefaultSettingsAmplifier = SettingsAmplifier(
 )
 
 
-class CharacterizationAmplifier(CharacterizationCommon):
-    settings: SettingsAmplifier
+class CharacterizationDevice(CharacterizationCommon):
+    settings: SettingsDevice
     _input_val: float
     _logger: Logger
 
     def __init__(self, folder_reference: str) -> None:
-        """Class for handling the measurement routine for characterising a Digital-Analog-Converter (DAC)
+        """Class for handling the measurement routine for characterising an electrical device
         :param folder_reference:    String with source folder to find the Main Repo Path
         """
         super().__init__()
         self._logger = getLogger(__name__)
         self.settings = YamlConfigHandler(
-            yaml_template=DefaultSettingsAmplifier,
+            yaml_template=DefaultSettingsDevice,
             path2yaml='config',
-            yaml_name='Config_TestAmplifier',
+            yaml_name='Config_TestDevice',
             folder_reference=folder_reference,
-        ).get_class(SettingsAmplifier)
+        ).get_class(SettingsDevice)
 
-    def run_test_transfer(self, chnl: int, func_mux, func_set_daq, func_sens, func_get_daq, func_beep) -> dict:
-        """Function for characterizing the transfer function of the Amplifier
-        :param chnl:            Integer number for testing the channel
-        :param func_mux:        Function for defining the testmode of the hardware DUT with defining the channel (chnl)
-        :param func_set_daq:    Function for applying selected voltage/current signal on DAQ with input params (data)
-        :param func_sens:       Function for getting the applied voltage/current (sensing) from DAQ device
-        :param func_get_daq:    Function for sensing the DUT-amplifier output from DAQ
-        :param func_beep:       Function for do a beep in DAQ
-        :return:                Dictionary with ['stim': input test signal of one repetition, 'settings': Settings, 'rpt<X>': Test results]"""
-        stimuli = self.settings.get_cycle_stimuli_input()
+    def run_test_transfer(self, func_stim, func_daq, func_sens, func_resp, func_beep) -> dict:
+        """Function for characterizing the transfer function of the ADC
+        :param func_stim:   Function to build the test signal (sawtooth, sinusoidal, triangular, pulse) from settings
+        :param func_daq:    Function for setting the voltage/current value on DAQ with input params (data)
+        :param func_sens:   Function for sensing the applied voltage/current (measured) from DAQ device
+        :param func_resp:    Function for getting the applied voltage/current (output) from DAQ device
+        :param func_beep:   Function for do a beep in DAQ
+        :return:            Dictionary with ['stim': input test signal of one repetition, 'settings': Settings, 'rpt<X>': Test results]"""
+        stimuli = func_stim()
         results = {'stim': stimuli}
 
         sens_test = self.settings.get_cycle_empty_array()
         results_ch = self.settings.get_cycle_empty_array()
-        func_mux(chnl)
-        self._logger.debug(f"Prepared DAC channel: {chnl}")
 
         for rpt_idx in range(self.settings.num_rpt):
-            for val_idx, data in enumerate(tqdm(stimuli, ncols=100, desc=f"Process CH{chnl} @ repetition {1 + rpt_idx}/{self.settings.num_rpt}")):
+            for val_idx, data in enumerate(tqdm(stimuli, ncols=100, desc=f"Process repetition {1 + rpt_idx}/{self.settings.num_rpt}")):
                 self._input_val = data
-                func_set_daq(data)
+                func_daq(data)
+
                 sleep(self.settings.sleep_sec)
                 for daq_idx in range(self.settings.daq_ovr):
                     sens_test[rpt_idx, val_idx, daq_idx] = func_sens()
-                    results_ch[rpt_idx, val_idx, daq_idx] = func_get_daq()
+                    results_ch[rpt_idx, val_idx, daq_idx] = func_resp()
 
             func_beep()
             results.update({f"rpt{rpt_idx:02d}": results_ch})

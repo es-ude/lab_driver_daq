@@ -1,7 +1,7 @@
 if __name__ == '__main__':
     from lab_driver import get_path_to_project, get_repo_name
-    from lab_driver.process_plots import plot_transfer_function_norm, plot_transfer_function_metric
-    from lab_driver.process_data import MetricCalculator
+    from lab_driver.process.plots import plot_transfer_function_norm, plot_transfer_function_metric
+    from lab_driver.process.data import MetricCalculator
 
     print(get_repo_name())
     path2data = get_path_to_project(new_folder='test_data', folder_ref=get_repo_name())

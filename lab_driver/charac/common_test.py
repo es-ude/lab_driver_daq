@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from lab_driver.charac_common import CharacterizationCommon
+from lab_driver.charac.common import CharacterizationCommon
 
 
 class TestCommon(unittest.TestCase):

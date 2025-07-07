@@ -1,6 +1,6 @@
 import unittest
 from lab_driver import get_path_to_project
-from lab_driver.process_common import ProcessCommon
+from lab_driver.process.common import ProcessCommon
 
 
 class TestDataAnalysis(unittest.TestCase):
