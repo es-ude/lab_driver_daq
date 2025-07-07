@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from lab_driver.yaml_handler import YamlConfigHandler
 from lab_driver.charac.common import CharacterizationCommon
 from lab_driver.process.data import MetricCalculator
-from lab_driver.process.plots import plot_transfer_function_norm, plot_transfer_function_metric
+from lab_driver.plots import plot_transfer_function_norm, plot_transfer_function_metric
 
 
 @dataclass

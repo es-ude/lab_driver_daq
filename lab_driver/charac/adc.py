@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from lab_driver.yaml_handler import YamlConfigHandler
 from lab_driver.charac.common import CharacterizationCommon
 from lab_driver.process.data import MetricCalculator
-from lab_driver.process.plots import plot_transfer_function_norm, plot_transfer_function_metric
+from lab_driver.plots import plot_transfer_function_norm, plot_transfer_function_metric
 
 
 @dataclass
@@ -136,17 +136,15 @@ class CharacterizationADC(CharacterizationCommon):
         :param file_name:   Name of numpy array with DAQ results to load
         :return:            None
         """
-        hndl = MetricCalculator()
         self._logger.info('Loading the data file')
-        data = hndl.load_data(
+        data = MetricCalculator().load_data(
             path=path,
             file_name=file_name
         )['data']
         self._logger.info('Calculating the metric')
-        metric = hndl.process_data_direct(data)
 
         self.__plot_characteristic(
-            metric=metric,
+            data=data,
             path2save=path,
             file_name=file_name
         )
@@ -162,19 +160,19 @@ class CharacterizationADC(CharacterizationCommon):
         self._logger.info('Calculating the metric')
         metric = hndl.process_data_direct(data)
         self.__plot_characteristic(
-            metric=metric,
+            data=metric,
             path2save=path,
             file_name=file_name
         )
 
-    def __plot_characteristic(self, metric: dict, path2save: str, file_name: str) -> None:
+    def __plot_characteristic(self, data: dict, path2save: str, file_name: str) -> None:
         self._logger.info('Plotting the signals')
         hndl = MetricCalculator()
         file_name_wo_ext = splitext(file_name)[0]
 
         xtext = r'Voltage $V_{in}$ [V]'
         plot_transfer_function_norm(
-            data=metric,
+            data=data,
             path2save=path2save,
             xlabel=xtext,
             ylabel='ADC Output',
@@ -182,7 +180,7 @@ class CharacterizationADC(CharacterizationCommon):
             file_name=f"{file_name_wo_ext}_norm"
         )
         plot_transfer_function_metric(
-            data=metric,
+            data=data,
             func=hndl.calculate_lsb,
             path2save=path2save,
             xlabel=xtext,
@@ -191,7 +189,7 @@ class CharacterizationADC(CharacterizationCommon):
             file_name=f"{file_name_wo_ext}_lsb"
         )
         plot_transfer_function_metric(
-            data=metric,
+            data=data,
             func=hndl.calculate_dnl,
             path2save=path2save,
             xlabel=xtext,

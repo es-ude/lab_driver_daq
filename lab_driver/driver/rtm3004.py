@@ -1,6 +1,4 @@
-from requests import options
-from logging import getLogger
-from lab_driver.mxo4x import *
+from lab_driver.driver.mxo4x import *
 
 
 class DriverRTM3004(DriverMXO4X):

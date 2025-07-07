@@ -1,11 +1,15 @@
 import numpy as np
+from os.path import splitext
 from logging import getLogger, Logger
 from tqdm import tqdm
 from time import sleep
 from datetime import datetime
 from dataclasses import dataclass
-from lab_driver.charac.common import CharacterizationCommon
+
 from lab_driver.yaml_handler import YamlConfigHandler
+from lab_driver.charac.common import CharacterizationCommon
+from lab_driver.process.data import MetricCalculator
+from lab_driver.plots import plot_transfer_function_norm, plot_transfer_function_metric
 
 
 @dataclass
@@ -101,7 +105,7 @@ class CharacterizationAmplifier(CharacterizationCommon):
         sens_test = self.settings.get_cycle_empty_array()
         results_ch = self.settings.get_cycle_empty_array()
         func_mux(chnl)
-        self._logger.debug(f"Prepared DAC channel: {chnl}")
+        self._logger.debug(f"Prepared Amplifier channel: {chnl}")
 
         for rpt_idx in range(self.settings.num_rpt):
             for val_idx, data in enumerate(tqdm(stimuli, ncols=100, desc=f"Process CH{chnl} @ repetition {1 + rpt_idx}/{self.settings.num_rpt}")):
@@ -117,5 +121,63 @@ class CharacterizationAmplifier(CharacterizationCommon):
         for _ in range(4):
             sleep(0.5)
             func_beep()
-
         return results
+
+    def plot_characteristic_results_direct(self, data: dict, file_name: str, path: str) -> None:
+        """Function for plotting the loaded data files
+        :param data:        Dictionary with measurement data ['stim', 'ch<x>', ...]
+        :param path:        Path to measurement in which the figures are saved
+        :param file_name:   Name of figure file to save
+        :return:            None
+        """
+        self.__plot_characteristic(
+            data=data,
+            path2save=path,
+            file_name=file_name
+        )
+
+    def plot_characteristic_results_from_file(self, file_name: str, path: str) -> None:
+        """Function for plotting the loaded data files
+        :param path:        Path to measurement in which the figures are saved
+        :param file_name:   Name of figure file to save
+        :return:            None
+        """
+        self._logger.info('Loading the data file')
+        data = MetricCalculator().load_data(
+            path=path,
+            file_name=file_name
+        )['data']
+        self._logger.info('Calculating the metric')
+
+        self.__plot_characteristic(
+            data=data,
+            path2save=path,
+            file_name=file_name
+        )
+
+    def __plot_characteristic(self, data: dict, path2save: str, file_name: str) -> None:
+        """"""
+        hndl = MetricCalculator()
+        metric = hndl.process_data_direct(data)
+        self._logger.info('Calculating the metric')
+
+        file_name_wo_ext = splitext(file_name)[0]
+        xtext = r'Voltage $V_{in}$ [V]'
+        plot_transfer_function_norm(
+            data=metric,
+            path2save=path2save,
+            xlabel=xtext,
+            ylabel=r'Voltage $V_{out}$ [V]',
+            title='',
+            file_name=f"{file_name_wo_ext}_norm"
+        )
+
+        plot_transfer_function_metric(
+            data=metric,
+            func=hndl.calculate_gain_from_transfer,
+            path2save=path2save,
+            xlabel=xtext,
+            ylabel='Gain [V/V]',
+            title='',
+            file_name=f"{file_name_wo_ext}_gain"
+        )
