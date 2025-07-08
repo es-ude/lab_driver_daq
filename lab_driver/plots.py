@@ -1,6 +1,7 @@
 import numpy as np
 from os import makedirs
 from os.path import join
+from pathlib import Path
 from matplotlib import pyplot as plt
 
 from lab_driver.process.data import calculate_total_harmonics_distortion
@@ -10,6 +11,11 @@ def get_plot_color(idx: int) -> str:
     """Getting the color string"""
     sel_color = ['k', 'r', 'b', 'g', 'y', 'c', 'm', 'gray']
     return sel_color[idx % len(sel_color)]
+
+
+def get_font_size() -> int:
+    """Getting the font size for paper work"""
+    return 14
 
 
 def get_plot_marker(idx: int) -> str:
@@ -143,13 +149,15 @@ def plot_transfer_function_metric(data: dict, func: object, path2save: str='',
     )
 
 
-def plot_spectral_data(data: dict, show_peaks: bool=True, show_plot: bool=True, N_harmonics: int=6, path2save: str='') -> None:
+def plot_spectral_data(data: dict, N_harmonics: int=6, file_name: str='', path2save: str='',
+                       show_peaks: bool=True, show_plot: bool=True) -> None:
     """Plotting the spectral data, measured with R&S MXO44
     :param data:        Dictionary with spectral data from measurement
+    :param N_harmonics: Number of harmonics for calculation and plot
+    :param file_name:   File name of the saved figure
+    :param path2save:   Path for saving the figure
     :param show_peaks:  Boolean for highlighting the harmonics
     :param show_plot:   Boolean for showing the plot
-    :param N_harmonics: Number of harmonics for calculation and plot
-    :param path2save:   Path for saving the figure
     """
     assert [key for key in data.keys()] == ['f', 'Y']
     deltax = 20
@@ -166,44 +174,59 @@ def plot_spectral_data(data: dict, show_peaks: bool=True, show_plot: bool=True, 
 
     plt.xlim([data['f'][0] * scalex, data['f'][-1] * scalex])
     plt.xticks(ticks=np.round(np.linspace(data['f'][0], data['f'][-1], 9, dtype=float) * scalex, 1))
-    plt.xlabel(r'Frequency $f$ [kHz]')
-    plt.ylabel(r'Spectral Amplitude $\hat{Y}(f)$ [dB]')
+    plt.xlabel(r'Frequency $f$ [kHz]', fontsize=get_font_size())
+    plt.ylabel(r'Spectral Amplitude $\hat{Y}(f)$ [dB]', fontsize=get_font_size())
 
     thd = calculate_total_harmonics_distortion(
         freq=data['f'],
         spectral=10 ** (data['Y'] / 20),
         N_harmonics=N_harmonics
     )
-    plt.title(f'THD = {thd:.2f} dB')
+    plt.title(f'THD = {thd:.2f} dB', fontsize=get_font_size())
     plt.grid()
     plt.tight_layout()
 
     if path2save:
-        save_figure(plt, path2save, f'spectral_thd')
+        filename_wo_ext = Path(file_name).stem
+        save_figure(plt, path=path2save, name=f'{filename_wo_ext}_spectral', formats=['pdf', 'svg', 'eps'])
     if show_plot:
         plt.show(block=True)
 
 
-def plot_fra_data(data: dict, show_plot: bool=True, path2save: str='') -> None:
+def plot_fra_data(data: dict, file_name: str='', path2save: str='',
+                  show_plot: bool=True) -> None:
     """Plotting the data from Frequency Response Analysis (FRA) using R&S MXO44
     :param data:        Dictionary with measured data from device
-    :param show_plot:   Boolean for showing the plot
+    :param file_name:   File name of the saved figure
     :param path2save:   Path for saving the figure
+    :param show_plot:   Boolean for showing the plot
     """
     assert [key for key in data.keys()] == ['f', 'gain', 'phase']
+    # --- Preprocessing (Unwrap phase information)
+    xphase_jmp = [idx+1 for idx, val in enumerate(np.diff(data['phase'])) if val > +250]
+    xphase_art = [True for val in np.diff(data['phase']) if val > +250]
+    xphase_jmp.extend([idx+1 for idx, val in enumerate(np.diff(data['phase'])) if val < -250])
+    xphase_art.extend([False for val in np.diff(data['phase']) if val < -250])
+    phase = data['phase']
+    for xpos, style in zip(xphase_jmp, xphase_art):
+        phase[xpos:] += -360. if style else +360.
+
+    # --- Plot
     fig, ax1 = plt.subplots()
     ax1.semilogx(data['f'], data['gain'], color='k', marker='.', markersize=6)
 
     ax1.set_xlim([data['f'][0], data['f'][-1]])
-    ax1.set_xlabel(r'Frequency $f$ [Hz]')
-    ax1.set_ylabel(r'Gain $|H(f)|$ [dB]', color='k')
+    ax1.set_xlabel(r'Frequency $f$ [Hz]', fontsize=get_font_size())
+    ax1.set_ylabel(r'Gain $|H(f)|$ [dB]', color='k', fontsize=get_font_size())
+    ax1.grid(True, which="both", ls="--")
 
     ax2 = ax1.twinx()
-    ax2.semilogx(data['f'], data['phase'], color='r', marker='.', markersize=6)
-    ax2.set_ylabel(r'Phase $\alpha$ [°]', color='r')
+    ax2.semilogx(data['f'], phase, color='r', marker='.', markersize=6)
+    ax2.set_ylabel(r'Phase $\alpha$ [°]', color='r', fontsize=get_font_size())
     plt.tight_layout()
 
-    if path2save:
-        save_figure(plt, path2save, f'fra_bode')
+    if path2save and file_name:
+        filename_wo_ext = Path(file_name).stem
+        save_figure(plt, path=path2save, name=f'{filename_wo_ext}_fra',  formats=['pdf', 'svg', 'eps'])
     if show_plot:
         plt.show(block=True)

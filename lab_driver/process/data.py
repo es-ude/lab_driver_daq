@@ -138,22 +138,15 @@ class MetricCalculator(ProcessCommon):
         :param daq_output:  Numpy array with DAQ output
         :return:            Numpy array with DNL
         """
-        # TODO: Check
-        """
-        ideal_curr = (self.max_amp - self.min_amp) * dig_values / max(dig_values) - self.max_amp
-        DNL = np.diff(dig_curr_med) * (n_dig_val / (self.max_amp - self.min_amp)) - 1
-        INL = dig_curr_med - ideal_curr
-        """
-        return self.calculate_lsb(stim_input, daq_output) - 1
+        return self.calculate_lsb(stim_input, daq_output) / self.calculate_lsb_mean(stim_input, daq_output) - 1
 
-    @staticmethod
-    def calculate_inl(stim_input: np.ndarray, daq_output: np.ndarray) -> np.ndarray:
+    def calculate_inl(self, stim_input: np.ndarray, daq_output: np.ndarray) -> np.ndarray:
         """Calculating the Integral Non-Linearity (INL) of a transfer function from DAC/ADC
         :param stim_input:  Numpy array with stimulus input
         :param daq_output:  Numpy array with DAQ output
         :return:        Numpy array with INL
         """
-        raise NotImplementedError
+        return daq_output - self.calculate_lsb_mean(stim_input, daq_output) * stim_input
 
     @staticmethod
     def calculate_error_mbe(y_pred: np.ndarray | float, y_true: np.ndarray | float) -> float:
