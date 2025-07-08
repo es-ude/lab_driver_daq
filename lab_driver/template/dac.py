@@ -2,7 +2,8 @@ from os.path import join, dirname, basename
 from glob import glob
 from time import sleep
 from logging import getLogger, Logger
-from lab_driver import get_repo_name, get_path_to_project, init_project_folder, DriverDMM6500
+from lab_driver import get_repo_name, get_path_to_project, init_project_folder, DriverPort, DriverPortIES
+from lab_driver.driver import DriverDMM6500
 from lab_driver.charac.dac import CharacterizationDAC
 # PYTHON API OF THE DUT HAVE TO BE INCLUDED
 from src import DriverDUT
@@ -19,10 +20,10 @@ class TestHandlerDAC:
     _folder_name: str
     _search_index: str='dac'
 
-    def __init__(self, com_dut: str, com_dmm: str, en_debug: bool=False, only_plot: bool=False) -> None:
+    def __init__(self, com_dut: str, com_sets: DriverPort=DriverPortIES, en_debug: bool=False, only_plot: bool=False) -> None:
         """Class for handling the Analog-Digital-Converter test routine
         :param com_dut:     String with COM-Port of DUT board
-        :param com_dmm:     String with COM-Port of DMM6500 DAQ
+        :param com_sets:    Class with COM-Ports of laboratory devices
         :param en_debug:    Boolean for enabling debugging mode (without DAQ hardware) (default=False)
         :param only_plot:   Boolean for plotting mode (default=False)
         """
@@ -41,7 +42,7 @@ class TestHandlerDAC:
         if not self._en_debug and not only_plot:
             self._hndl_daq = DriverDMM6500()
             self._hndl_daq.serial_start_known_target(
-                resource_name=com_dmm,
+                resource_name=com_sets.com_dmm,
                 do_reset=True
             )
             self._hndl_daq.do_beep()
@@ -95,7 +96,6 @@ def run_test() -> None:
     bool_only_plot = False
     hndl = TestHandlerDAC(
         com_dut='COM7',
-        com_dmm='USB0::124:dada:3545',
         en_debug=False,
         only_plot=bool_only_plot
     )

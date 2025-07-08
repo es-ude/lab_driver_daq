@@ -2,7 +2,9 @@ from os.path import join, dirname, basename
 from glob import glob
 from time import sleep
 from logging import getLogger, Logger
-from lab_driver import get_repo_name, get_path_to_project, init_project_folder, DriverNGUX01
+from lab_driver import (get_repo_name, get_path_to_project, init_project_folder,
+                        DriverPort, DriverPortIES)
+from lab_driver.driver import DriverNGUX01
 from lab_driver.charac.adc import CharacterizationADC
 # PYTHON API OF THE DUT HAVE TO BE INCLUDED
 from src import DriverDUT
@@ -19,10 +21,10 @@ class TestHandlerADC:
     _folder_name: str
     _search_index: str='adc'
 
-    def __init__(self, com_dut: str, com_ngu: str, en_debug: bool=False, only_plot: bool=False) -> None:
+    def __init__(self, com_dut: str, com_sets: DriverPort=DriverPortIES, en_debug: bool=False, only_plot: bool=False) -> None:
         """Class for handling the Analog-Digital-Converter test routine
         :param com_dut:     String with COM-Port of DUT board
-        :param com_ngu:     String with COM-Port of NGU411 DAQ
+        :param com_sets:    Class with COM-Ports of laboratory devices
         :param en_debug:    Boolean for enabling debugging mode (without DAQ hardware) (default=False)
         :param only_plot:   Boolean for plotting mode (default=False)
         """
@@ -41,7 +43,7 @@ class TestHandlerADC:
         if not self._en_debug and not only_plot:
             self._hndl_daq = DriverNGUX01()
             self._hndl_daq.serial_open_known_target(
-                resource_name=com_ngu,
+                resource_name=com_sets.com_ngu,
                 do_reset=True
             )
             self._hndl_daq.do_beep()
@@ -98,7 +100,6 @@ def run_test() -> None:
     bool_only_plot = False
     hndl = TestHandlerADC(
         com_dut='COM7',
-        com_ngu='USB0::124:dada:3545',
         en_debug=False,
         only_plot=bool_only_plot
     )

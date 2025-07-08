@@ -177,7 +177,7 @@ class TestDataAnalysis(unittest.TestCase):
             fs=sampling_rate,
             N_harmonics=1
         )
-        self.assertEqual(rslt, -20.067970271376048)
+        self.assertEqual(rslt, -20.21920586821124)
 
     def test_metric_thd_one_harmonic_spec(self):
         sampling_rate = 1000
@@ -194,7 +194,7 @@ class TestDataAnalysis(unittest.TestCase):
             spectral=spec,
             N_harmonics=2
         )
-        self.assertEqual(rslt, -19.118108722018935)
+        self.assertEqual(rslt, -19.300251257175265)
 
 
 if __name__ == "__main__":

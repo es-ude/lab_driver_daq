@@ -14,25 +14,23 @@ class ProcessCommon:
         """Function for getting an overview of available data files"""
         return [file for file in listdir(path) if acronym in file]
 
-    def load_data(self, path: str, file_name: str) -> dict:
+    def load_data(self, path: str, file_name: str, load_settings: bool=False) -> dict:
         """Function for loading the measurement data
-        :param path:        Path to measurement in which the files are inside
-        :param file_name:   Name of numpy file with measurement results
+        :param path:            Path to measurement in which the files are inside
+        :param file_name:       Name of numpy file with measurement results
+        :param load_settings:   If True, load settings will be loaded from file
         :return:            Dictionary
         """
         path2file = join(path, file_name)
         self._logger.debug(f"Loading data from: {path2file}")
         assert exists(path2file), f"File {path2file} does not exist"
-        data = np.load(
-            file=join(path, file_name),
+        loaded = np.load(
+            file=path2file,
             allow_pickle=True,
             mmap_mode='r'
-        )['data'].flatten()[0]
-        set = np.load(
-            file=join(path, file_name),
-            allow_pickle=True,
-            mmap_mode='r'
-        )['settings'].flatten()[0]
+        )
+        data = loaded['data'].flatten()[0]
+        set = loaded['settings'].flatten()[0] if load_settings else dict()
         return {'data': data, 'settings': set}
 
     @staticmethod

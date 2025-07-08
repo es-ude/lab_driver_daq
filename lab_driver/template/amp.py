@@ -2,7 +2,8 @@ from os.path import join, dirname, basename
 from glob import glob
 from time import sleep
 from logging import getLogger, Logger
-from lab_driver import get_repo_name, get_path_to_project, init_project_folder, scan_instruments, DriverNGUX01, DriverDMM6500
+from lab_driver import get_repo_name, get_path_to_project, init_project_folder, scan_instruments, DriverPort, DriverPortIES
+from lab_driver.driver import DriverNGUX01, DriverDMM6500
 from lab_driver.charac.amp import CharacterizationAmplifier
 
 
@@ -17,10 +18,9 @@ class TestHandlerAmplifier:
     _folder_name: str
     _search_index: str='amp'
 
-    def __init__(self, com_dmm: str, com_ngu: str, en_debug: bool=False, only_plot: bool=False) -> None:
-        """Class for handling the Analog-Digital-Converter test routine
-        :param com_dmm:     String with COM-Port of DMM6500 DAQ
-        :param com_ngu:     String with COM-Port of NGU411 DAQ
+    def __init__(self, com_sets: DriverPort=DriverPortIES, en_debug: bool=False, only_plot: bool=False) -> None:
+        """Class for handling the test routine of an electronic amplifier stage
+        :param com_sets:    Class with COM-Ports of laboratory devices
         :param en_debug:    Boolean for enabling debugging mode (without DAQ system) (default=False)
         :param only_plot:   Boolean for plotting mode (default=False)
         """
@@ -34,7 +34,7 @@ class TestHandlerAmplifier:
         if not self._en_debug and not only_plot:
             self._hndl_src = DriverNGUX01()
             self._hndl_src.serial_open_known_target(
-                resource_name=com_ngu,
+                resource_name=com_sets.com_ngu,
                 do_reset=True
             )
             self._hndl_src.do_beep()
@@ -42,7 +42,7 @@ class TestHandlerAmplifier:
 
             self._hndl_daq = DriverDMM6500()
             self._hndl_daq.serial_start_known_target(
-                resource_name=com_dmm,
+                resource_name=com_sets.com_dmm,
                 do_reset=True
             )
             self._hndl_daq.do_beep()
@@ -98,10 +98,7 @@ class TestHandlerAmplifier:
 
 def run_test() -> None:
     bool_only_plot = False
-
     hndl = TestHandlerAmplifier(
-        com_dmm='USB0::0x05E6::0x6500::04622454::INSTR',
-        com_ngu='USB0::0x0AAD::0x0197::3639.3763k04-101215::INSTR',
         en_debug=False,
         only_plot=bool_only_plot
     )

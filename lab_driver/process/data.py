@@ -70,7 +70,7 @@ def calculate_total_harmonics_distortion(freq: np.ndarray, spectral: np.ndarray,
     peaks_y = search_y[xpos]
 
     # --- Return THD
-    return 20 * np.log10(np.sqrt(np.sum(np.power(peaks_y[1:], 2))) / peaks_y[0])
+    return float(20 * np.log10(np.sqrt(np.sum(np.power(peaks_y[1:], 2))) / peaks_y[0]))
 
 
 def calculate_total_harmonics_distortion_from_transient(signal: np.ndarray, fs: float, N_harmonics: int=4) -> float:
