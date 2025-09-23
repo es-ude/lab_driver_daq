@@ -1,5 +1,8 @@
+import h5py
+import numpy as np
+from pathlib import Path
 from lab_driver.csv_handler import CsvHandler
-from lab_driver.plots import plot_spectral_data, plot_fra_data
+from lab_driver.process.data import do_fft
 
 
 def load_spectral_data(path: str, file_name: str, begin_line: int=33) -> dict:
@@ -38,3 +41,17 @@ def load_fra_data(path: str, file_name: str, begin_line: int=2) -> dict:
         type_load=float
     )
     return {'f': data[:, 1], 'gain': data[:, 2], 'phase': data[:, 3]}
+
+
+def load_transient_data(path: str, file_name: str, freq_ref: float) -> dict:
+    data = dict()
+    with h5py.File(Path(path) / file_name, 'r') as f:
+        groups = list(f['Waveforms'].keys())
+        groups_meta = list(f['Waveforms'][groups[0]].keys())
+        for channel in groups:
+            data.update({channel: f['Waveforms'][channel][f'{channel} Data'][...]})
+
+    f, Y = do_fft(data[list(data.keys())[0]], 1., 'Hamming')
+    samp_rate = freq_ref / f[np.argmax(Y)] * f[-1]
+    data.update({"fs": samp_rate})
+    return data

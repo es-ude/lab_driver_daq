@@ -4,7 +4,7 @@ from os.path import join
 from pathlib import Path
 from matplotlib import pyplot as plt
 
-from lab_driver.process.data import calculate_total_harmonics_distortion
+from lab_driver.process.data import calculate_total_harmonics_distortion, do_fft
 
 
 def get_plot_color(idx: int) -> str:
@@ -150,36 +150,39 @@ def plot_transfer_function_metric(data: dict, func: object, path2save: str='',
 
 
 def plot_spectral_data(data: dict, N_harmonics: int=6, file_name: str='', path2save: str='',
-                       show_peaks: bool=True, show_plot: bool=True) -> None:
+                       delta_peaks: int=20, show_peaks: bool=True, show_plot: bool=True, is_input_db: bool=True) -> None:
     """Plotting the spectral data, measured with R&S MXO44
     :param data:        Dictionary with spectral data from measurement
     :param N_harmonics: Number of harmonics for calculation and plot
     :param file_name:   File name of the saved figure
     :param path2save:   Path for saving the figure
+    :param delta_peaks: Number of positions around the peaks
     :param show_peaks:  Boolean for highlighting the harmonics
     :param show_plot:   Boolean for showing the plot
+    :param is_input_db: Boolean for whether the data is logarithmic [dB]
+    :return:            None
     """
     assert [key for key in data.keys()] == ['f', 'Y']
-    deltax = 20
+
     # --- Plotten
     scalex = 1e-3
     plt.figure()
-    plt.plot(scalex * data['f'], data['Y'], color='k')
+    plt.loglog(scalex * data['f'], data['Y'], color='k')
     if show_peaks:
-        f_zero = data['f'][data['Y'].argmax()]
+        f_zero = data['f'][data['Y'][delta_peaks:].argmax()+delta_peaks]
         xharm = [np.argwhere(data['f'] >= f_zero * (1+ite)).flatten()[0] for ite in range(1+N_harmonics)]
         for idx, xpos in enumerate(xharm):
-            xval = np.linspace(start=xpos-deltax, stop=xpos+deltax, endpoint=False, num=2*deltax, dtype=int)
-            plt.plot(scalex * data['f'][xval], data['Y'][xval], color='r' if idx == 0 else 'b')
+            xval = np.linspace(start=xpos-delta_peaks, stop=xpos+delta_peaks, endpoint=False, num=2*delta_peaks, dtype=int)
+            plt.loglog(scalex * data['f'][xval], data['Y'][xval], color='r' if idx == 0 else 'b')
 
     plt.xlim([data['f'][0] * scalex, data['f'][-1] * scalex])
-    plt.xticks(ticks=np.round(np.linspace(data['f'][0], data['f'][-1], 9, dtype=float) * scalex, 1))
+    #plt.xticks(ticks=np.round(np.linspace(data['f'][0], data['f'][-1], 9, dtype=float) * scalex, 1))
     plt.xlabel(r'Frequency $f$ [kHz]', fontsize=get_font_size())
     plt.ylabel(r'Spectral Amplitude $\hat{Y}(f)$ [dB]', fontsize=get_font_size())
 
     thd = calculate_total_harmonics_distortion(
-        freq=data['f'],
-        spectral=10 ** (data['Y'] / 20),
+        freq=data['f'][delta_peaks:],
+        spectral=data['Y'][delta_peaks:] if not is_input_db else 10 ** (data['Y'][delta_peaks:] / 20),
         N_harmonics=N_harmonics
     )
     plt.title(f'THD = {thd:.2f} dB', fontsize=get_font_size())
@@ -211,6 +214,13 @@ def plot_fra_data(data: dict, file_name: str='', path2save: str='',
     for xpos, style in zip(xphase_jmp, xphase_art):
         phase[xpos:] += -360. if style else +360.
 
+    # --- Extract features
+    num_pol = 1
+    print(f"Gain_max = {data['gain'].max():.2f} dB")
+    xcorner = np.argwhere(data['gain'] - (data['gain'].max()- num_pol*3) < 0).flatten()
+    if xcorner.size > 0:
+        print(f"f_-3dB = {1e-3* data['f'][xcorner[0]]:.4f} kHz")
+
     # --- Plot
     fig, ax1 = plt.subplots()
     ax1.semilogx(data['f'], data['gain'], color='k', marker='.', markersize=6)
@@ -219,6 +229,8 @@ def plot_fra_data(data: dict, file_name: str='', path2save: str='',
     ax1.set_xlabel(r'Frequency $f$ [Hz]', fontsize=get_font_size())
     ax1.set_ylabel(r'Gain $|H(f)|$ [dB]', color='k', fontsize=get_font_size())
     ax1.grid(True, which="both", ls="--")
+    ax1.yaxis.get_ticklocs(minor=True)
+    ax1.minorticks_on()
 
     ax2 = ax1.twinx()
     ax2.semilogx(data['f'], phase, color='r', marker='.', markersize=6)
@@ -230,3 +242,32 @@ def plot_fra_data(data: dict, file_name: str='', path2save: str='',
         save_figure(plt, path=path2save, name=f'{filename_wo_ext}_fra',  formats=['pdf', 'svg', 'eps'])
     if show_plot:
         plt.show(block=True)
+
+
+def plot_transient_data(data: dict, file_name: str='', path2save: str='', show_plot: bool=False) -> None:
+    """"""
+    for key, data_ch in data.items():
+        if not key == "fs":
+            time = np.linspace(start=0, stop=data_ch.size, num=data_ch.size) / data["fs"]
+            f, Y = do_fft(data_ch, data["fs"], 'Hamming')
+            plot_spectral_data(
+                data={"f": 2*f, "Y": Y},
+                N_harmonics=10,
+                file_name=file_name,
+                path2save=path2save,
+                show_plot=False,
+                is_input_db=False
+            )
+            f_start = np.power(10, np.floor(np.log10(f[np.argmax(Y)])))
+
+            fig, axs = plt.subplots(nrows=2, ncols=1)
+            axs[0].plot(time, data_ch, 'k', label=key)
+            axs[0].set_xlim([0., time[-1]])
+            axs[1].loglog(2*f, Y, 'k', label=key)
+            axs[1].set_xlim([f_start, f[-1]])
+            for ax in axs:
+                ax.grid()
+            plt.tight_layout()
+
+            if show_plot:
+                plt.show(block=True)

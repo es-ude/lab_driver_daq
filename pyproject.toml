@@ -34,6 +34,7 @@ maintainers = [
     {name = 'Ismail Yilmaz', email = 'ismail.yilmaz@stud.uni-due.de'}
 ]
 dependencies = [
+    "h5py>=3.14.0",
     "matplotlib>=3.10.3",
     "numpy>=2.2.2",
     "pyvisa>=1.14.1",
