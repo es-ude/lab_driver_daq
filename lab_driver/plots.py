@@ -244,7 +244,7 @@ def plot_fra_data(data: dict, file_name: str='', path2save: str='',
         plt.show(block=True)
 
 
-def plot_transient_data(data: dict, file_name: str='', path2save: str='', show_plot: bool=False) -> None:
+def plot_transient_data(data: dict, file_name: str='', path2save: str='', show_plot: bool=False, xzoom: list=[0, -1]) -> None:
     """"""
     for key, data_ch in data.items():
         if not key == "fs":
@@ -262,12 +262,15 @@ def plot_transient_data(data: dict, file_name: str='', path2save: str='', show_p
 
             fig, axs = plt.subplots(nrows=2, ncols=1)
             axs[0].plot(time, data_ch, 'k', label=key)
-            axs[0].set_xlim([0., time[-1]])
+            axs[0].set_xlim([time[xzoom[0]], time[xzoom[1]]])
             axs[1].loglog(2*f, Y, 'k', label=key)
             axs[1].set_xlim([f_start, f[-1]])
             for ax in axs:
                 ax.grid()
             plt.tight_layout()
 
+            if path2save and file_name:
+                filename_wo_ext = Path(file_name).stem
+                save_figure(plt, path=path2save, name=f'{filename_wo_ext}_transient', formats=['pdf', 'svg', 'eps'])
             if show_plot:
                 plt.show(block=True)

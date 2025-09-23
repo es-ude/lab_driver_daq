@@ -51,7 +51,10 @@ def analyse_transient_data(path: str, show_last_plot: bool=True) -> None:
         )
         plot_transient_data(
             data=data_tran,
+            file_name=file_sel,
+            path2save=path,
             show_plot=show_last_plot and file_sel == list_files[-1],
+            xzoom=[10000, 16000]
         )
 
 
