@@ -24,7 +24,7 @@ def get_plot_marker(idx: int) -> str:
     return sel_marker[idx % len(sel_marker)]
 
 
-def save_figure(fig, path: str, name: str, formats: list=('pdf', 'svg')) -> None:
+def save_figure(fig, path: str | Path, name: str, formats: list=('pdf', 'svg')) -> None:
     """Saving figure in given format
     Args:
         fig:        Matplot which will be saved
@@ -245,7 +245,14 @@ def plot_fra_data(data: dict, file_name: str='', path2save: str='',
 
 
 def plot_transient_data(data: dict, file_name: str='', path2save: str='', show_plot: bool=False, xzoom: list=[0, -1]) -> None:
-    """"""
+    """Plotting content from transient measurements for extracting Total Harmonic Distortion (THD)
+    :param data:        Dictionary with measured data from device with keys: [fs, ...]
+    :param file_name:   String with file name of the saved figure
+    :param path2save:   String with path for saving the figure
+    :param show_plot:   Boolean for showing the plot
+    :param xzoom:       List with xzoom values
+    :return:            None
+    """
     for key, data_ch in data.items():
         if not key == "fs":
             time = np.linspace(start=0, stop=data_ch.size, num=data_ch.size) / data["fs"]
@@ -274,3 +281,68 @@ def plot_transient_data(data: dict, file_name: str='', path2save: str='', show_p
                 save_figure(plt, path=path2save, name=f'{filename_wo_ext}_transient', formats=['pdf', 'svg', 'eps'])
             if show_plot:
                 plt.show(block=True)
+
+
+def plot_transient_noise(time: np.ndarray, signal: np.ndarray, offset: np.ndarray,
+                         xzoom: list=[0, -1], file_name: str="noise", path2save: str="", show_plot: bool=False) -> None:
+    """Plotting content from transient measurements for extracting noise properties
+    :param time:        Numpy array with time vector
+    :param signal:      Numpy array with content, shape: (num_channels, data)
+    :param offset:      Numpy array with offset, shape: (num_channels, )
+    :param xzoom:       List with xzoom values
+    :param file_name:   String with file name of the saved figure
+    :param path2save:   String with path for saving the figure
+    :param show_plot:   Boolean for showing the plot
+    :return:            None
+    """
+    plt.figure()
+    for idx, (dat0, off0) in enumerate(zip(signal, offset)):
+        plt.plot(time, dat0 - off0, label=f"CH{idx}", color=get_plot_color(idx))
+
+    plt.xlabel("Time / s", size=get_font_size())
+    plt.ylabel("ADC output", size=get_font_size())
+    plt.xlim([time[xzoom[0]], time[xzoom[1]]])
+    plt.legend(loc="upper left")
+    plt.grid(True)
+    plt.tight_layout()
+
+    if path2save and file_name:
+        save_path = Path(path2save).parent
+        filename_wo_ext = Path(file_name).stem
+        save_figure(plt, path=save_path, name=f'{filename_wo_ext}_transient', formats=['pdf', 'svg', 'eps'])
+    if show_plot:
+        plt.show()
+
+
+def plot_spectrum_noise(freq: list, spec: list, channels: list, file_name: str="noise", path2save: str="", show_plot: bool=False) -> None:
+    """Plotting the noise amplitude spectral density from transient measurements for extracting noise properties
+    :param freq:        List with numpy array with frequency vector for each channel
+    :param spec:        List with numpy array with noise spectral density vector for each channel
+    :param channels:    List of channel names
+    :param file_name:   String with file name of the saved figure
+    :param path2save:   String with path for saving the figure
+    :param show_plot:   Boolean for showing the plot
+    :return:            None
+    """
+    scale_y, unit_y = scale_auto_value(spec[0])
+    freq_min = np.min(np.array([f[0] if not f[0] == 0. else f[1] for f in freq]))
+    freq_max = np.max(np.array([f.max() for f in freq]))
+    freq_dec_max = 10 ** np.ceil(np.log10(freq_max))
+
+    plt.figure()
+    for idx, (f, Y, ch) in enumerate(zip(freq, spec, channels)):
+        plt.loglog(f, scale_y * Y, label=f"CH{ch}", color=get_plot_color(idx))
+
+    plt.legend(loc="upper left")
+    plt.xlim([freq_min, freq_dec_max])
+    plt.ylabel("Noise spectral density / " + unit_y + r"V/$\sqrt{Hz}$", size=get_font_size())
+    plt.xlabel("Frequency / Hz", size=get_font_size())
+    plt.tight_layout()
+    plt.grid(True)
+
+    if path2save and file_name:
+        save_path = Path(path2save).parent
+        filename_wo_ext = Path(file_name).stem
+        save_figure(plt, path=save_path, name=f'{filename_wo_ext}_spectrum', formats=['pdf', 'svg', 'eps'])
+    if show_plot:
+        plt.show()
