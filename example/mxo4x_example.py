@@ -1,5 +1,5 @@
 from time import sleep
-from lab_driver import DriverMXO4X
+from lab_driver.driver import DriverMXO4X
 from lab_driver.units import KHz, MHz
 
 

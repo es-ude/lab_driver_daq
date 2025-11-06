@@ -91,20 +91,3 @@ in {
     };
   };
 }
-## Commented out while we're configuring pre-commit manually
-# pre-commit.hooks = {
-#   shellcheck.enable = true;
-#   ripsecrets.enable = true; # don't commit secrets
-#   ruff.enable = true; # lint and automatically fix simple problems/reformat
-#   taplo.enable = true; # reformat toml
-#   nixfmt-rfc-style.enable = true; # reformat nix
-#   ruff-format.enable = true;
-#   mypy = {
-#     enable = false;
-#   }; # check type annotations
-#   end-of-file-fixer.enable = true;
-#   commitizen.enable = true; # help adhering to commit style guidelines
-#   check-toml.enable = true; # check toml syntax
-#   check-case-conflicts.enable = true;
-#   check-added-large-files.enable = true;
-# };

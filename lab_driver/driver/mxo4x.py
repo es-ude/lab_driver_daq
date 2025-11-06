@@ -128,6 +128,18 @@ class DriverMXO4X:
     def __clamp(self, x, y, z):
         return min(max(x, y), z)
     
+    def __suspend_timeout(self, timeout):
+        if type(self.SerialDevice) == RsInstrument:
+            backup_timeout = self.SerialDevice.visa_timeout
+            self.SerialDevice.visa_timeout = timeout
+            yield
+            self.SerialDevice.visa_timeout = backup_timeout
+        else:
+            backup_timeout = self.SerialDevice.timeout
+            self.SerialDevice.timeout = timeout
+            yield
+            self.SerialDevice.timeout = backup_timeout
+    
     def sync(self, timeout = 86400000) -> None:
         """Wait until all queued commands have been processed
         Args:
@@ -135,16 +147,8 @@ class DriverMXO4X:
         Returns:
             None
         """
-        if type(self.SerialDevice) == RsInstrument:
-            backup_timeout = self.SerialDevice.visa_timeout
-            self.SerialDevice.visa_timeout = timeout
+        for _ in self.__suspend_timeout(timeout):
             self.__write_to_dev("*WAI")
-            self.SerialDevice.visa_timeout = backup_timeout
-        else:
-            backup_timeout = self.SerialDevice.timeout
-            self.SerialDevice.timeout = timeout
-            self.__write_to_dev("*WAI")
-            self.SerialDevice.timeout = backup_timeout
 
     def serial_open_known_target(self, resource_name: str, do_reset=False) -> None:
         """Open the serial connection to device
@@ -179,7 +183,7 @@ class DriverMXO4X:
             self.serial_open_known_target("USB0::0x0AAD::0x0197::1335.5050k04-201451::INSTR", do_reset)
             return
 
-        list_dev = scan_instruments(0x0aad, 0x0197)
+        list_dev = scan_instruments()
         rm = pyvisa.ResourceManager(self._visa_lib)
 
         # --- Checking if device address is right
@@ -1219,8 +1223,9 @@ class DriverMXO4X:
             None
         """
         self.fra_enter()
-        while self.__read_from_dev("FRAN:STAT?") == "RUN":
-            sleep(0.1)
+        for _ in self.__suspend_timeout(86400000):
+            while self.__read_from_dev("FRAN:STAT?") == "RUN":
+                sleep(0.1)
     
     def live_command_mode(self) -> None:
         """DEBUGGING - enter statements during the execution of the program using the Python

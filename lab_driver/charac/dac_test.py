@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 from copy import deepcopy
 from lab_driver import get_repo_name
-from lab_driver.charac_dac import SettingsDAC, CharacterizationDAC
+from lab_driver.charac.dac import SettingsDAC, CharacterizationDAC
 
 
 settings = SettingsDAC(

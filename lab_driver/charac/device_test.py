@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 from copy import deepcopy
 from lab_driver import get_repo_name
-from lab_driver.charac_device import SettingsDevice, CharacterizationDevice
+from lab_driver.charac.device import SettingsDevice, CharacterizationDevice
 
 
 settings = SettingsDevice(

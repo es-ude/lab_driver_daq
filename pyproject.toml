@@ -3,15 +3,15 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["lab_driver"]
-exclude = ["hardware", "example"]
-namespaces = false
-
-
 [tool.hatch.version]
 source = "vcs"
+
+
+[tool.hatch.build.targets.sdist]
+where = ["."]
+include = ["lab_driver"]
+exclude = ['*_test.py', 'hardware', 'example', 'test_data', 'run_tests.py']
+namespaces = false
 
 
 [tool.hatch.build.targets.wheel]
@@ -34,16 +34,15 @@ maintainers = [
     {name = 'Ismail Yilmaz', email = 'ismail.yilmaz@stud.uni-due.de'}
 ]
 dependencies = [
+    "h5py>=3.14.0",
     "matplotlib>=3.10.3",
     "numpy>=2.2.2",
     "pyvisa>=1.14.1",
     "pyvisa-py>=0.7.2",
     "pyyaml>=6.0.2",
-    "requests>=2.32.3",
     "rsinstrument>=1.90.0",
     "scipy>=1.15.3",
     "tqdm>=4.67.1",
-    "zeroconf>=0.141.0",
 ]
 
 
@@ -57,12 +56,18 @@ sphinxcontrib-wavedrom = { git = "https://github.com/glencoe/sphinx-wavedrom.git
 
 [dependency-groups]
 dev = [
-    "build>=1.2.2.post1",
     "hatch>=1.14.0",
-    "hatch-vcs>=0.4.0",
-    "ipykernel>=6.29.5",
-    "pre-commit>=4.0.1",
-    "tach>=0.23.0",
+    "hatch-vcs>=0.4.0"
+]
+testing = [
+    "pytest>=8.3.4",
+    "hypothesis>=6.124.7",
+    "pytest-cov>=6.0.0",
+    "coverage>=7.6.9"
+]
+lint = [
+    "mypy>=1.13.0",
+    "ruff>=0.9.0"
 ]
 docs = [
     "sphinx>=8.1.3",
@@ -86,19 +91,6 @@ docs = [
     "htmlark[http,parsers]>=1.0.0",
     "pydata-sphinx-theme>=0.16.1",
     "sphinx-design>=0.6.1",
-]
-testing = [
-    "pytest>=8.3.4",
-    "hypothesis>=6.124.7",
-    "pytest-cov>=6.0.0",
-    "coverage>=7.6.9"
-]
-lint = ["mypy>=1.13.0", "ruff>=0.9.0"]
-lsp = [
-    "esbonio>=0.16.5",
-    "pylsp-mypy>=0.6.9",
-    "pylsp-rope>=0.1.17",
-    "python-lsp-server>=1.12.0",
 ]
 
 

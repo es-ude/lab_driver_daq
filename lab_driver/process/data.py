@@ -2,7 +2,7 @@ import numpy as np
 from logging import getLogger, Logger
 from scipy.signal import find_peaks
 from scipy.signal.windows import gaussian
-from lab_driver.process_common import ProcessCommon
+from lab_driver.process.common import ProcessCommon
 
 
 def window_method(window_size: int, method: str="hamming") -> np.ndarray:
@@ -46,8 +46,51 @@ def do_fft(y: np.ndarray, fs: float, method_window: str='') -> [np.ndarray, np.n
     xsel = np.where(freq >= 0)
     fft_out = fft_out[xsel]
     freq = freq[xsel]
-
     return freq, fft_out
+
+
+def calculate_total_harmonics_distortion(freq: np.ndarray, spectral: np.ndarray, N_harmonics: int=4) -> float:
+    """Calculating the Total Harmonics Distortion (THD) of spectral input
+    Args:
+        freq:           Array with frequency values for spectral analysis
+        spectral:       Array with Spectral input
+        N_harmonics:    Number of used harmonics for calculating THD
+    Return:
+          THD value (in dB) and corresponding frequency positions of peaks
+    """
+    fsine = freq[np.argmax(spectral).flatten()[0]]
+    # --- Limiting the search space
+    pos_x0 = np.argwhere(freq >= 0.5 * fsine).flatten()[0]
+    pos_x1 = np.argwhere(freq >= (N_harmonics + 1.5) * fsine).flatten()[0]
+    search_y = spectral[pos_x0:pos_x1]
+
+    # --- Getting peaks values
+    df = np.mean(np.diff(freq))
+    xpos, _ = find_peaks(search_y, distance=int(0.8 * fsine / df))
+    peaks_y = search_y[xpos]
+
+    # --- Return THD
+    return float(20 * np.log10(np.sqrt(np.sum(np.power(peaks_y[1:], 2))) / peaks_y[0]))
+
+
+def calculate_total_harmonics_distortion_from_transient(signal: np.ndarray, fs: float, N_harmonics: int=4) -> float:
+    """Calculating the Total Harmonics Distortion (THD) from transient input
+    Args:
+        signal:         Array with frequency values for spectral analysis
+        fs:             Sampling rate [Hz]
+        N_harmonics:    Number of used harmonics for calculating THD
+    Return:
+          THD value (in dB)
+    """
+    freq, spectral = do_fft(
+        y=signal,
+        fs=fs
+    )
+    return calculate_total_harmonics_distortion(
+        freq=freq,
+        spectral=spectral,
+        N_harmonics=N_harmonics
+    )
 
 
 class MetricCalculator(ProcessCommon):
@@ -69,6 +112,17 @@ class MetricCalculator(ProcessCommon):
         ), axis=0))
 
     @staticmethod
+    def calculate_gain_from_transfer(stim_input: np.ndarray, src_output: np.ndarray) -> np.ndarray:
+        """Function for extracting the gain of an electrical circuit using the transfer function test
+        :param stim_input:  Numpy array with stimulus input
+        :param daq_output:  Numpy array with DAQ output (should have same unit like stim_input)
+        :return:            Numpy array with gain value
+        """
+        assert src_output.shape == stim_input.shape, "Dimension / shape mismatch"
+        return np.diff(src_output) / np.diff(stim_input)
+
+
+    @staticmethod
     def calculate_lsb(stim_input: np.ndarray, daq_output: np.ndarray) -> np.array:
         """Function for calculating the mean Least Significant Bit (LSB)
         :param stim_input:  Numpy array with stimulus input
@@ -84,16 +138,15 @@ class MetricCalculator(ProcessCommon):
         :param daq_output:  Numpy array with DAQ output
         :return:            Numpy array with DNL
         """
-        return self.calculate_lsb(stim_input, daq_output) - 1
+        return self.calculate_lsb(stim_input, daq_output) / self.calculate_lsb_mean(stim_input, daq_output) - 1
 
-    @staticmethod
-    def calculate_inl(stim_input: np.ndarray, daq_output: np.ndarray) -> np.ndarray:
+    def calculate_inl(self, stim_input: np.ndarray, daq_output: np.ndarray) -> np.ndarray:
         """Calculating the Integral Non-Linearity (INL) of a transfer function from DAC/ADC
         :param stim_input:  Numpy array with stimulus input
         :param daq_output:  Numpy array with DAQ output
         :return:        Numpy array with INL
         """
-        raise NotImplementedError
+        return daq_output - self.calculate_lsb_mean(stim_input, daq_output) * stim_input
 
     @staticmethod
     def calculate_error_mbe(y_pred: np.ndarray | float, y_true: np.ndarray | float) -> float:

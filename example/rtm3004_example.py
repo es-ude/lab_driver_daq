@@ -1,6 +1,7 @@
-from lab_driver import DriverRTM3004
+from lab_driver.driver import DriverRTM3004
 from lab_driver.units import KHz
 from time import sleep
+
 
 if __name__ == '__main__':
     # Try connecting to the device and reset it

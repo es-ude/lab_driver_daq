@@ -1,9 +1,5 @@
-from .dmm6500 import DriverDMM6500
-from .mxo4x import DriverMXO4X
-from .ngux01 import DriverNGUX01
-from .hmp40x0 import DriverHMP40X0
-from .rtm3004 import DriverRTM3004
 from .scan_instruments import scan_instruments
+from dataclasses import dataclass
 
 
 def get_repo_name() -> str:
@@ -35,3 +31,44 @@ def get_path_to_project(new_folder: str='', folder_ref: str='') -> str:
         path_to_import = join(getcwd().split(folder_ref)[0], folder_ref) if folder_ref else getcwd()
         path_to_proj = join(path_to_import, new_folder)
     return abspath(path_to_proj)
+
+
+def init_project_folder(new_folder: str='') -> None:
+    """Generating folder structure in first run
+    :param new_folder:      Name of the new folder to create (test case)
+    :return:                None
+    """
+    from os import makedirs
+    from os.path import join
+
+    folder_structure = ['runs', 'config']
+    copy_files = {}
+
+    path2start = join(get_path_to_project(), new_folder)
+    makedirs(path2start, exist_ok=True)
+
+    for folder_name in folder_structure:
+        makedirs(join(path2start, folder_name), exist_ok=True)
+
+
+@dataclass(frozen=True)
+class DriverPort:
+    """Class with COM-Port addresses of each device for testing
+    Attributes:
+        com_ngu (str):  COM-Port of the R&S NGU411 (Four-Quadrant SMU)
+        com_dmm (str):  COM-Port of the Keithley DMM411 (Digital Multimeter)
+        com_mxo (str):  COM-Port of the R&S MXO411 (Mixed-Signal Oscilloscope)
+        com_hmp (str):  COM-Port of the R&S HMP40x (Power Supply)
+    """
+    com_ngu: str
+    com_dmm: str
+    com_mxo: str
+    com_hmp: str
+
+
+DriverPortIES = DriverPort(
+    com_ngu='USB0::0x0AAD::0x0197::3639.3763k04-101215::INSTR',
+    com_dmm='USB0::0x05E6::0x6500::04622454::INSTR',
+    com_mxo='',
+    com_hmp='COM7',
+)

@@ -5,7 +5,7 @@ from time import sleep
 from datetime import datetime
 from dataclasses import dataclass
 
-from lab_driver.charac_common import CharacterizationCommon
+from lab_driver.charac.common import CharacterizationCommon
 from lab_driver.yaml_handler import YamlConfigHandler
 
 
