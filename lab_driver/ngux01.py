@@ -76,7 +76,7 @@ class DriverNGUX01:
 
     def serial_start(self, do_reset: bool=False) -> None:
         """Open the serial connection to device"""
-        list_dev = scan_instruments()
+        list_dev = scan_instruments(0x0aad)     # PID?? please add if you find it
         if system() == "Linux":
             rm = pyvisa.ResourceManager("/usr/lib/librsvisa.so@ivi")
         else:

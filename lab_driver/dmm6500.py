@@ -64,7 +64,7 @@ class DriverDMM6500:
         :param do_beep:     Do a beep on DAQ device after init done
         :return:            None
         """
-        list_dev = scan_instruments()
+        list_dev = scan_instruments(0x05e6, 0x6500)
         rm = pyvisa.ResourceManager("@py")
 
         # --- Checking if device address is right

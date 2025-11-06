@@ -120,7 +120,7 @@ class DriverRTM3004(DriverMXO4X):
             self.serial_open_known_target("USB0::0x0AAD::0x01D6::113613::INSTR", do_reset)
             return
 
-        list_dev = scan_instruments(do_print=False)
+        list_dev = scan_instruments(0x0aad, 0x01d6)
         rm = pyvisa.ResourceManager(self._visa_lib)
 
         # --- Checking if device address is right
