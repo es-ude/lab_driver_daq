@@ -149,57 +149,69 @@ def plot_transfer_function_metric(data: dict, func: object, path2save: str='',
     )
 
 
-def plot_spectral_data(data: dict, N_harmonics: int=6, file_name: str='', path2save: str='',
-                       delta_peaks: int=20, show_peaks: bool=True, show_plot: bool=True, is_input_db: bool=True) -> None:
-    """Plotting the spectral data, measured with R&S MXO44
-    :param data:        Dictionary with spectral data from measurement
+def plot_spectrum_harmonic(data: dict, N_harmonics: int=6, file_name: str= '', path2save: str= '',
+                           delta_peaks: int=20, show_peaks: bool=True, show_metric: bool=False, show_plot: bool=True, is_input_db: bool=True) -> None:
+    """Plotting the spectrum for analysing the total harmonic distortion
+    :param data:        Dictionary with spectral data from measurement with keys: [f, Y]
     :param N_harmonics: Number of harmonics for calculation and plot
     :param file_name:   File name of the saved figure
     :param path2save:   Path for saving the figure
     :param delta_peaks: Number of positions around the peaks
     :param show_peaks:  Boolean for highlighting the harmonics
+    :param show_metric: Boolean for showing the THD metric
     :param show_plot:   Boolean for showing the plot
     :param is_input_db: Boolean for whether the data is logarithmic [dB]
     :return:            None
     """
     assert [key for key in data.keys()] == ['f', 'Y']
+    legend_text = ['Signal', 'Stimulus', 'Harmonics']
+    scale_x, unit_x = scale_auto_value(data['f'])
 
     # --- Plotten
-    scalex = 1e-3
     plt.figure()
-    plt.loglog(scalex * data['f'], data['Y'], color='k')
+    plt.loglog(scale_x * data['f'], data['Y'], color='k', label=legend_text[0])
     if show_peaks:
         f_zero = data['f'][data['Y'][delta_peaks:].argmax()+delta_peaks]
         xharm = [np.argwhere(data['f'] >= f_zero * (1+ite)).flatten()[0] for ite in range(1+N_harmonics)]
         for idx, xpos in enumerate(xharm):
             xval = np.linspace(start=xpos-delta_peaks, stop=xpos+delta_peaks, endpoint=False, num=2*delta_peaks, dtype=int)
-            plt.loglog(scalex * data['f'][xval], data['Y'][xval], color='r' if idx == 0 else 'b')
+            if idx == 0:
+                plt.loglog(scale_x * data['f'][xval], data['Y'][xval], color='r', label=legend_text[1])
+            elif idx == 1:
+                plt.loglog(scale_x * data['f'][xval], data['Y'][xval], color='b', label=legend_text[2])
+            else:
+                plt.loglog(scale_x * data['f'][xval], data['Y'][xval], color='b')
 
-    plt.xlim([data['f'][0] * scalex, data['f'][-1] * scalex])
-    #plt.xticks(ticks=np.round(np.linspace(data['f'][0], data['f'][-1], 9, dtype=float) * scalex, 1))
-    plt.xlabel(r'Frequency $f$ [kHz]', fontsize=get_font_size())
+    plt.xlim([data['f'][0] * scale_x, data['f'][-1] * scale_x])
+    plt.xticks(fontsize=get_font_size()-1)
+    plt.yticks(fontsize=get_font_size()-1)
+    plt.xlabel(r'Frequency $f$' + f" [{unit_x}Hz]", fontsize=get_font_size())
     plt.ylabel(r'Spectral Amplitude $\hat{Y}(f)$ [dB]', fontsize=get_font_size())
+    plt.legend(loc="best", fontsize=get_font_size())
 
     thd = calculate_total_harmonics_distortion(
         freq=data['f'][delta_peaks:],
         spectral=data['Y'][delta_peaks:] if not is_input_db else 10 ** (data['Y'][delta_peaks:] / 20),
         N_harmonics=N_harmonics
     )
-    plt.title(f'THD = {thd:.2f} dB', fontsize=get_font_size())
+    if show_metric:
+        plt.title(f'THD = {thd:.2f} dB', fontsize=get_font_size())
     plt.grid()
     plt.tight_layout()
 
     if path2save:
+        file_folder = Path(path2save).parent
         filename_wo_ext = Path(file_name).stem
-        save_figure(plt, path=path2save, name=f'{filename_wo_ext}_spectral', formats=['pdf', 'svg', 'eps'])
+        save_figure(plt, path=file_folder, name=f'{filename_wo_ext}_spectral', formats=['pdf', 'svg', 'eps'])
     if show_plot:
         plt.show(block=True)
 
 
-def plot_fra_data(data: dict, file_name: str='', path2save: str='',
+def plot_fra_data(data: dict, num_pol: int=1, file_name: str='', path2save: str='',
                   show_plot: bool=True) -> None:
     """Plotting the data from Frequency Response Analysis (FRA) using R&S MXO44
     :param data:        Dictionary with measured data from device
+    :param num_pol:     Integer with number of poles in transfer function, detecting slopes (each high-pass and low-pass)
     :param file_name:   File name of the saved figure
     :param path2save:   Path for saving the figure
     :param show_plot:   Boolean for showing the plot
@@ -215,7 +227,9 @@ def plot_fra_data(data: dict, file_name: str='', path2save: str='',
         phase[xpos:] += -360. if style else +360.
 
     # --- Extract features
+    # TODO: Refactor with own function
     num_pol = 1
+    print("----------------------------")
     print(f"Gain_max = {data['gain'].max():.2f} dB")
     xcorner = np.argwhere(data['gain'] - (data['gain'].max()- num_pol*3) < 0).flatten()
     if xcorner.size > 0:
@@ -225,7 +239,8 @@ def plot_fra_data(data: dict, file_name: str='', path2save: str='',
     fig, ax1 = plt.subplots()
     ax1.semilogx(data['f'], data['gain'], color='k', marker='.', markersize=6)
 
-    ax1.set_xlim([data['f'][0], data['f'][-1]])
+    ax1.set_xlim([data['f'][0], 1e5])#data['f'][-1]])
+    ax1.set_ylim([-10, 25])
     ax1.set_xlabel(r'Frequency $f$ [Hz]', fontsize=get_font_size())
     ax1.set_ylabel(r'Gain $|H(f)|$ [dB]', color='k', fontsize=get_font_size())
     ax1.grid(True, which="both", ls="--")
@@ -235,8 +250,9 @@ def plot_fra_data(data: dict, file_name: str='', path2save: str='',
     ax2 = ax1.twinx()
     ax2.semilogx(data['f'], phase, color='r', marker='.', markersize=6)
     ax2.set_ylabel(r'Phase $\alpha$ [°]', color='r', fontsize=get_font_size())
-    plt.tight_layout()
+    ax2.set_ylim([-180, 60])
 
+    plt.tight_layout()
     if path2save and file_name:
         filename_wo_ext = Path(file_name).stem
         save_figure(plt, path=path2save, name=f'{filename_wo_ext}_fra',  formats=['pdf', 'svg', 'eps'])
@@ -257,7 +273,7 @@ def plot_transient_data(data: dict, file_name: str='', path2save: str='', show_p
         if not key == "fs":
             time = np.linspace(start=0, stop=data_ch.size, num=data_ch.size) / data["fs"]
             f, Y = do_fft(data_ch, data["fs"], 'Hamming')
-            plot_spectral_data(
+            plot_spectrum_harmonic(
                 data={"f": 2*f, "Y": Y},
                 N_harmonics=10,
                 file_name=file_name,
@@ -283,33 +299,43 @@ def plot_transient_data(data: dict, file_name: str='', path2save: str='', show_p
                 plt.show(block=True)
 
 
-def plot_transient_noise(time: np.ndarray, signal: np.ndarray, offset: np.ndarray,
+def plot_transient_noise(time: np.ndarray, signal: np.ndarray, offset: np.ndarray, scale: float=1.0,
                          xzoom: list=[0, -1], file_name: str="noise", path2save: str="", show_plot: bool=False) -> None:
     """Plotting content from transient measurements for extracting noise properties
     :param time:        Numpy array with time vector
     :param signal:      Numpy array with content, shape: (num_channels, data)
     :param offset:      Numpy array with offset, shape: (num_channels, )
+    :param scale:       Floating value with y-scaling value [Default: 1.0 --> ADC output, else Voltage]
     :param xzoom:       List with xzoom values
     :param file_name:   String with file name of the saved figure
     :param path2save:   String with path for saving the figure
     :param show_plot:   Boolean for showing the plot
     :return:            None
     """
+    if scale == 1.0:
+        scale_y = 1.0
+        unit_y = ''
+    else:
+        scale_y, unit_y = scale_auto_value(scale * signal)
+
     plt.figure()
     for idx, (dat0, off0) in enumerate(zip(signal, offset)):
-        plt.plot(time, dat0 - off0, label=f"CH{idx}", color=get_plot_color(idx))
+        plt.plot(time, scale_y * scale * (dat0 - off0), label=f"CH{idx}", color=get_plot_color(idx))
 
-    plt.xlabel("Time / s", size=get_font_size())
-    plt.ylabel("ADC output", size=get_font_size())
+    plt.xlabel(r"Time $t$ [s]", size=get_font_size())
+    if scale == 1.0:
+        plt.ylabel("ADC output", size=get_font_size())
+    else:
+        plt.ylabel(f"Voltage output [{unit_y}V]", size=get_font_size())
     plt.xlim([time[xzoom[0]], time[xzoom[1]]])
-    plt.legend(loc="upper left")
+    plt.legend(loc="upper left", fontsize=get_font_size())
     plt.grid(True)
     plt.tight_layout()
 
     if path2save and file_name:
         save_path = Path(path2save).parent
         filename_wo_ext = Path(file_name).stem
-        save_figure(plt, path=save_path, name=f'{filename_wo_ext}_transient', formats=['pdf', 'svg', 'eps'])
+        save_figure(plt, path=save_path, name=f'{filename_wo_ext}_noise_tran', formats=['pdf', 'svg', 'eps'])
     if show_plot:
         plt.show()
 
@@ -330,19 +356,23 @@ def plot_spectrum_noise(freq: list, spec: list, channels: list, file_name: str="
     freq_dec_max = 10 ** np.ceil(np.log10(freq_max))
 
     plt.figure()
-    for idx, (f, Y, ch) in enumerate(zip(freq, spec, channels)):
-        plt.loglog(f, scale_y * Y, label=f"CH{ch}", color=get_plot_color(idx))
+    ylabel = [f"CH{ch}" for ch in channels]
+    #label = ['Only AFE', 'AFE + sensor']
+    for idx, (f, Y, label) in enumerate(zip(freq, spec, ylabel)):
+        plt.loglog(f, scale_y * Y, label=label, color=get_plot_color(idx))
 
-    plt.legend(loc="upper left")
     plt.xlim([freq_min, freq_dec_max])
-    plt.ylabel("Noise spectral density / " + unit_y + r"V/$\sqrt{Hz}$", size=get_font_size())
-    plt.xlabel("Frequency / Hz", size=get_font_size())
+    plt.ylabel("Noise spectral density [" + unit_y + r"V/$\sqrt{Hz}$]", size=get_font_size())
+    plt.xlabel(r"Frequency $f$ [Hz]", size=get_font_size())
+    plt.xticks(fontsize=get_font_size()-1)
+    plt.yticks(fontsize=get_font_size()-1)
+    plt.legend(loc="best", fontsize=get_font_size()-1)
     plt.tight_layout()
     plt.grid(True)
 
     if path2save and file_name:
         save_path = Path(path2save).parent
         filename_wo_ext = Path(file_name).stem
-        save_figure(plt, path=save_path, name=f'{filename_wo_ext}_spectrum', formats=['pdf', 'svg', 'eps'])
+        save_figure(plt, path=save_path, name=f'{filename_wo_ext}_noise_spec', formats=['pdf', 'svg', 'eps'])
     if show_plot:
         plt.show()

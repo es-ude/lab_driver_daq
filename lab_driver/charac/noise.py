@@ -15,23 +15,30 @@ class CharacterizationNoise:
     _metric: dict = dict()
 
     def __init__(self) -> None:
-        """"""
+        """Class for analysing transient measurement to extract noise properties"""
         self._logger = getLogger(__name__)
 
     @property
-    def get_sampling_rate(self):
+    def get_sampling_rate(self) -> float:
+        """Returning the sampling rate of the measurement"""
         return self._fs
 
     @property
-    def get_channels_overview(self):
+    def get_channels_overview(self) -> list[int]:
+        """Returning a list with available channels to analyse"""
         return self._channels
 
     @property
-    def get_num_channels(self):
+    def get_num_channels(self) -> int:
+        """Return the number of channels"""
         return len(self._channels)
 
     def load_data(self, time: np.ndarray, signal: np.ndarray) -> None:
-        """"""
+        """Function for loading the measurement data into the class
+        :param time:    Numpy array with time information [shape: (num of samples, )]
+        :param signal:  Numpy array with noise information [shape: (num of channels, num of samples)]
+        :return:        None
+        """
         if signal.ndim != 2:
             raise ValueError("Signal shape must be (num_channels, data) - Please adapt!")
         else:
@@ -44,14 +51,19 @@ class CharacterizationNoise:
         self._signal = signal
 
     def exclude_channels_from_spec(self, exclude_channel: list) -> None:
-        """"""
+        """Function for excluding channels to extract the noise spectrum density
+        :param exclude_channel: List of channels to exclude
+        :return:                None
+        """
         for idx, item in enumerate(exclude_channel):
             self._spec.pop(item - idx)
             self._freq.pop(item - idx)
             self._channels.pop(item - idx)
 
-    def extract_noise_metric(self) -> dict:
-        """"""
+    def extract_transient_metrics(self) -> dict:
+        """Function for extracting some metrics from transient measurement data
+        :return:    Dictionary with metrics in keys: like offset, peak-peak-noise, sampling rate
+        """
         if len(self._channels) == 0:
             raise ValueError("Data is not loaded. Please load data first.")
 
@@ -71,7 +83,11 @@ class CharacterizationNoise:
         return self._metric
 
     def extract_noise_power_distribution(self, scale: float=1.0, num_segments: int=16354) -> dict:
-        """"""
+        """Function to extract noise power distribution from transient measurement
+        :param scale:           Floating value to scale the transient measurement, e.g. to scale the digital output to voltage
+        :param num_segments:    Number of samples in the noise spectral density
+        :return:                Dictionary of the spectrum with keys: freq, spec and chan
+        """
         if len(self._channels) == 0:
             raise ValueError("Data is not loaded. Please load data first.")
 
@@ -109,7 +125,11 @@ class CharacterizationNoise:
         return result
 
     def remove_power_line_noise(self, tolerance: float=5., num_harmonics: int=10) -> dict:
-        """"""
+        """Function for removing the power line noise in the spectrum
+        :param tolerance:       Floating tolerance value around the power line frequency (= 50 Hz)
+        :param num_harmonics:   Number of harmonics to remove
+        :return:                Dictionary with the new spectrum - keys: freq, spec and chan
+        """
         pl_line_freq = 50.
         if len(self._channels) == 0:
             raise ValueError("Data is not loaded. Please load data first.")
@@ -144,7 +164,9 @@ class CharacterizationNoise:
         )
 
     def extract_noise_rms(self) -> np.ndarray:
-        """"""
+        """Function for extracting the output effective noise voltage from the spectrum
+        :return:        Numpy array with noise RMS of all channels
+        """
         if len(self._channels) == 0:
             raise ValueError("Data is not loaded. Please load data first.")
 

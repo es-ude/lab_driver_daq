@@ -4,7 +4,7 @@ from lab_driver.process.mxo4x import (
     load_transient_data
 )
 from lab_driver.plots import (
-    plot_spectral_data,
+    plot_spectrum_harmonic,
     plot_fra_data,
     plot_transient_data
 )
@@ -18,7 +18,7 @@ def analyse_spectral_data(path: str, show_last_plot: bool=False) -> None:
             path=path,
             file_name=file_sel
         )
-        plot_spectral_data(
+        plot_spectrum_harmonic(
             data=data_spectral,
             file_name=file_sel,
             path2save=path,
@@ -59,5 +59,5 @@ def analyse_transient_data(path: str, show_last_plot: bool=True) -> None:
 
 
 if __name__ == "__main__":
-    #analyse_fra_data('C:/Users/Andre/Desktop/EEG-CH0')
-    analyse_transient_data('C:\\Users\\Andre\\Desktop\\MXO44\\Waveforms')
+    analyse_fra_data('C:/Users/Andre/Desktop/characterization_v1/FRA', False)
+    analyse_spectral_data('C:/Users/Andre/Desktop/characterization_v1/Harmonic', True)
