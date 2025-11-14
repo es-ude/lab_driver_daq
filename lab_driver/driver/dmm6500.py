@@ -1,6 +1,7 @@
 from time import sleep
 from logging import getLogger, Logger
 import pyvisa
+from serial.tools import list_ports
 from lab_driver.scan_instruments import scan_instruments
 
 
@@ -9,6 +10,8 @@ class DriverDMM6500:
     SerialActive = False
     _device_name_chck = "DMM6500"
     _logger: Logger
+    _usb_vid = 0x05e6
+    _usb_pid = 0x6500
 
     def __init__(self):
         """Class for handling the Keithley Digital Multimeter 6500 in Python"""
@@ -58,13 +61,31 @@ class DriverDMM6500:
         self.__do_check_idn()
         self.__init_dev(do_reset)
 
+    def get_usb_vid(self):
+        return self._usb_vid
+
+    def get_usb_pid(self):
+        return self._usb_pid
+
+    def scan_com_name(self) -> list:
+        """Returning the COM Port name of the addressable devices"""
+        available_coms = list_ports.comports()
+        list_right_com = [port.device for port in available_coms if
+                          port.vid == self._usb_vid and port.pid == self._usb_pid]
+        if len(list_right_com) == 0:
+            errmsg = '\n'.join([f"{port.usb_description()} {port.device} {port.usb_info()}" for port in available_coms])
+            raise ConnectionError(f"No COM Port with right USB found - Please adapt the VID and PID values from "
+                                  f"available COM ports:\n{errmsg}")
+        self._logger.debug(f"Found {len(list_right_com)} COM ports available")
+        return list_right_com
+
     def serial_start(self, do_reset: bool=False, do_beep: bool=True) -> None:
         """Open the serial connection to device
         :param do_reset:    Reset the DAQ device
         :param do_beep:     Do a beep on DAQ device after init done
         :return:            None
         """
-        list_dev = scan_instruments(0x05e6, 0x6500)
+        list_dev = scan_instruments(self)
         rm = pyvisa.ResourceManager("@py")
 
         # --- Checking if device address is right

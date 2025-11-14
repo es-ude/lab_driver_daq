@@ -5,7 +5,8 @@ from mxo4x import *
 
 class DriverRTM3004(DriverMXO4X):
     _device_name_chck = "RTM"
-
+    _usb_vid = 0x0aad
+    _usb_pid = 0x01d6
 
     def __write_to_dev(self, order: str) -> None:
         """Wrapper for executing commands on device
@@ -120,7 +121,7 @@ class DriverRTM3004(DriverMXO4X):
             self.serial_open_known_target("USB0::0x0AAD::0x01D6::113613::INSTR", do_reset)
             return
 
-        list_dev = scan_instruments(0x0aad, 0x01d6)
+        list_dev = scan_instruments(self)
         rm = pyvisa.ResourceManager(self._visa_lib)
 
         # --- Checking if device address is right

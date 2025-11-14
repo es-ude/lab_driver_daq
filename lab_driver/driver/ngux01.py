@@ -2,6 +2,7 @@ import pyvisa
 from platform import system
 from time import sleep, strftime, time_ns
 from logging import getLogger, Logger
+from serial.tools import list_ports
 from lab_driver.scan_instruments import scan_instruments
 
 
@@ -9,6 +10,8 @@ class DriverNGUX01:
     SerialDevice: pyvisa.Resource
     SerialActive = False
     _logger: Logger
+    _usb_vid = 0x0aad
+    _usb_pid = 0x0197    # for some reason NGU and MXO share the same PID
 
     _volt_range = [-20.0, 20.0]
     _curr_range = [-0.1, 0.1]
@@ -74,9 +77,27 @@ class DriverNGUX01:
             raise RuntimeError('Device not connected or USB class of NGU is not TMC (set per menu -> Interfaces -> USB class)')
         self.__init_dev(do_reset)
 
+    def get_usb_vid(self):
+        return self._usb_vid
+
+    def get_usb_pid(self):
+        return self._usb_pid
+    
+    def scan_com_name(self) -> list:
+        """Returning the COM Port name of the addressable devices"""
+        available_coms = list_ports.comports()
+        list_right_com = [port.device for port in available_coms if
+                          port.vid == self._usb_vid and port.pid == self._usb_pid]
+        if len(list_right_com) == 0:
+            errmsg = '\n'.join([f"{port.usb_description()} {port.device} {port.usb_info()}" for port in available_coms])
+            raise ConnectionError(f"No COM Port with right USB found - Please adapt the VID and PID values from "
+                                  f"available COM ports:\n{errmsg}")
+        self._logger.debug(f"Found {len(list_right_com)} COM ports available")
+        return list_right_com
+
     def serial_start(self, do_reset: bool=False) -> None:
         """Open the serial connection to device"""
-        list_dev = scan_instruments(0x0aad)     # PID?? please add if you find it
+        list_dev = scan_instruments(self)
         if system() == "Linux":
             rm = pyvisa.ResourceManager("/usr/lib/librsvisa.so@ivi")
         else:

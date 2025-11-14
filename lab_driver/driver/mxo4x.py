@@ -3,6 +3,7 @@ import platform
 from time import sleep, strftime
 from logging import getLogger, Logger
 from RsInstrument import RsInstrument
+from serial.tools import list_ports
 from lab_driver.scan_instruments import scan_instruments
 from lab_driver.units import *
 
@@ -11,6 +12,8 @@ class DriverMXO4X:
     SerialDevice: pyvisa.Resource | RsInstrument
     SerialActive = False
     _device_name_chck = "MXO"
+    _usb_vid = 0x0aad
+    _usb_pid = 0x0197    # for some reason NGU and MXO share the same PID
     _logger: Logger
 
     _gen_index = 1      # which generator to configure if none is explicitly stated
@@ -171,6 +174,24 @@ class DriverMXO4X:
         self.__do_check_idn()
         self.__init_dev(do_reset)
 
+    def get_usb_vid(self):
+        return self._usb_vid
+
+    def get_usb_pid(self):
+        return self._usb_pid
+
+    def scan_com_name(self) -> list:
+        """Returning the COM Port name of the addressable devices"""
+        available_coms = list_ports.comports()
+        list_right_com = [port.device for port in available_coms if
+                          port.vid == self._usb_vid and port.pid == self._usb_pid]
+        if len(list_right_com) == 0:
+            errmsg = '\n'.join([f"{port.usb_description()} {port.device} {port.usb_info()}" for port in available_coms])
+            raise ConnectionError(f"No COM Port with right USB found - Please adapt the VID and PID values from "
+                                  f"available COM ports:\n{errmsg}")
+        self._logger.debug(f"Found {len(list_right_com)} COM ports available")
+        return list_right_com
+
     def serial_start(self, do_reset=False) -> None:
         """Open the serial connection to device if it is found
         Args:
@@ -183,7 +204,7 @@ class DriverMXO4X:
             self.serial_open_known_target("USB0::0x0AAD::0x0197::1335.5050k04-201451::INSTR", do_reset)
             return
 
-        list_dev = scan_instruments(0x0aad, 0x0197)
+        list_dev = scan_instruments(self)
         rm = pyvisa.ResourceManager(self._visa_lib)
 
         # --- Checking if device address is right
