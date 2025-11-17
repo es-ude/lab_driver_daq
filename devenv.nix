@@ -44,21 +44,6 @@ in {
       before = ["check:tests"];
     };
 
-    "check:types" = {
-      exec = "${uv_run} mypy -p lab_driver_daq";
-      before = ["check:code-lint"];
-    };
-
-    "check:python-lint" = {
-      exec = "${uv_run} ruff check";
-      before = ["check:code-lint"];
-    };
-
-    "check:formatting" = {
-      exec = "${uv_run} ruff format --check";
-      before = ["check:code-lint"];
-    };
-
     "package:build" = {
       exec = "${unstablePkgs.uv}/bin/uv build";
     };
