@@ -84,9 +84,6 @@ in {
       '';
     };
 
-    "check:code-lint" = {
-    };
-
     "check:tests" = {
     };
   };

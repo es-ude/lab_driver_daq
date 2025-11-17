@@ -25,7 +25,6 @@ extensions = [
     "myst_parser",
     "sphinx_copybutton",
     "sphinx_togglebutton",
-    "sphinx_book_theme",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.todo",
@@ -33,9 +32,7 @@ extensions = [
     "sphinx_design",
     "autodoc2",
     "sphinxext.opengraph",
-    "sphinxcontrib.plantuml",
     "sphinxcontrib.mermaid",
-    "sphinxcontrib.wavedrom"
 ]
 
 templates_path = ["_templates"]
@@ -79,7 +76,6 @@ myst_enable_extensions = [
     "fieldlist",
     "html_admonition",
     "html_image",
-    "linkify",
     "replacements",
     "smartquotes",
     "strikethrough",
@@ -88,7 +84,7 @@ myst_enable_extensions = [
 ]
 
 # allow mermaid usage like on github in markdown
-myst_fence_as_directive = ["mermaid", "wavedrom"]
+myst_fence_as_directive = ["mermaid"]
 
 running_in_autobuild = os.getenv("SPHINX_AUTOBUILD", "NO") == "YES"
 
