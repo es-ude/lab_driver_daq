@@ -1,4 +1,4 @@
-from lab_driver.driver import DriverNGUX01
+from elasticai.hw_measurements.driver import DriverNGUX01
 
 
 if __name__ == '__main__':

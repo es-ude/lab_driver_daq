@@ -1,5 +1,6 @@
 # Driver for DAQ Devices of the IES Lab
-Python Driver for Measurement Devices from the Lab
+This Python package provides APIs for handling the measurement devices within the IES laboratory incl. automated results analysis.
+This is also part of the elastic AI ecosystem for deploying deep learning techniques on heterogenious platform (MCU+FPGA/ASIC). 
 
 ## Using the package release in other Repos
 Just adding this repo in the pyproject.toml file as dependencies by listing the git path.

@@ -2,7 +2,7 @@ import numpy as np
 import pyxdf
 from os.path import join
 from glob import glob
-from lab_driver.template.noise import extract_noise_properties
+from elasticai.hw_measurements.template.noise import extract_noise_properties
 
 
 def load_data(path2file: str) -> dict:

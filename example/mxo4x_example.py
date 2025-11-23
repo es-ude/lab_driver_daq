@@ -1,6 +1,6 @@
 from time import sleep
-from lab_driver.driver import DriverMXO4X
-from lab_driver.units import KHz, MHz
+from elasticai.hw_measurements.driver import DriverMXO4X
+from elasticai.hw_measurements import KHz, MHz
 
 
 if __name__ == '__main__':

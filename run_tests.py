@@ -1,4 +1,5 @@
 import unittest
+from os.path import exists
 from shutil import rmtree
 from logging import basicConfig, DEBUG
 
@@ -15,9 +16,9 @@ def define_logger() -> None:
 if __name__ == '__main__':
     define_logger()
     test_loader = unittest.TestLoader()
-    test_suite = test_loader.discover('lab_driver', pattern='*_test.py')
+    test_suite = test_loader.discover('elasticai/hw_measurements', pattern='*_test.py')
 
     test_runner = unittest.TextTestRunner()
     test_runner.run(test_suite)
-
-    rmtree('temp_test')
+    if exists('temp_test'):
+        rmtree('temp_test')

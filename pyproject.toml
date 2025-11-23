@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling", "hatch-vcs", "wheel"]
 build-backend = "hatchling.build"
 
 
@@ -9,21 +9,21 @@ source = "vcs"
 
 [tool.hatch.build.targets.sdist]
 where = ["."]
-include = ["lab_driver"]
+include = ["elasticai"]
 exclude = ['*_test.py', 'hardware', 'example', 'test_data', 'run_tests.py']
 namespaces = false
 
 
 [tool.hatch.build.targets.wheel]
-packages = ["lab_driver"]
+packages = ["elasticai"]
 exclude = ['*_test.py', 'hardware', 'example', 'test_data', 'run_tests.py']
 only-packages = true
 
 
 [project]
-name = "lab_driver_daq"
+name = "elasticai.hw-measurements"
 dynamic = ["version"]
-description = "Python API for handling Measurement Devices for Enabling automated Testing"
+description = "Python API for handling measurement devices to enable automated hardware testing"
 readme = "README.md"
 license =  {file = "LICENSE"}
 requires-python = ">=3.11"
@@ -37,6 +37,7 @@ dependencies = [
     "h5py>=3.14.0",
     "matplotlib>=3.10.3",
     "numpy>=2.2.2",
+    "pyserial>=3.5",
     "pyvisa>=1.14.1",
     "pyvisa-py>=0.7.2",
     "pyyaml>=6.0.2",
@@ -53,7 +54,9 @@ default-groups = ["dev", "docs", "testing"]
 [dependency-groups]
 dev = [
     "hatch>=1.14.0",
-    "hatch-vcs>=0.4.0"
+    "hatch-vcs>=0.4.0",
+    "hatchling>=1.27.0",
+    "wheel>=0.45.1",
 ]
 testing = [
     "pytest>=8.3.4",
@@ -62,7 +65,7 @@ testing = [
     "coverage>=7.6.9"
 ]
 docs = [
-   "myst-parser>=4.0.0",
+    "myst-parser>=4.0.0",
     "sphinx>=8.1.3",
     "sphinx-autodoc2>=0.5.0",
     "sphinx-prompt>=1.9.0",
@@ -73,3 +76,13 @@ docs = [
     "sphinxcontrib-mermaid>=1.0.0",
     "pydata-sphinx-theme>=0.16.1",
 ]
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+markers = [
+    "hardware: slow running system tests using real hardware"
+]
+testpaths = ["elasticai/hw-measurements"]
+python_files = ["*_test.py"]
+addopts = "--import-mode=importlib"

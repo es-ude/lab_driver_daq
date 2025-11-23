@@ -1,5 +1,5 @@
 from time import sleep
-from lab_driver.driver import DriverDMM6500
+from elasticai.hw_measurements.driver import DriverDMM6500
 
 
 if __name__ == "__main__":

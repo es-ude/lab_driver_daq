@@ -4,12 +4,13 @@ temp_test
 docs/apidocs
 
 **/config
+**/dist
 **/runs
 **/__pycache__
 **/.venv
 **/venv
-**/dist
 **/*.lock
 **/*.log
 **/*.yaml
+uv.lock
 .python-version

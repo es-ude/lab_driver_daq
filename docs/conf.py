@@ -8,15 +8,15 @@
 import os
 from importlib.metadata import version as _version
 from pathlib import Path
-
 from tomllib import load as _load_toml
 
-project = "lab_driver_daq"
+
+project = "hw_measurements"
 copyright = "2025, ies-ude (Intelligent Embedded System - University Duisburg-Essen)"
 author = "es-ude"
-release = _version("lab_driver_daq")
-version = ".".join(_version("lab_driver_daq").split(".")[0:2])
-html_title = "lab_driver_daq"
+release = _version("elasticai.hw_measurements")
+version = ".".join(_version("elasticai.hw_measurements").split(".")[0:2])
+html_title = "hw_measurements"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -91,8 +91,8 @@ running_in_autobuild = os.getenv("SPHINX_AUTOBUILD", "NO") == "YES"
 
 autodoc2_packages = [
     {
-        "path": "../lab_driver",
-        "module": "lab_driver",
+        "path": "../elasticai/hw_measurements",
+        "module": "elasticai.hw_measurements",
     },
 ]
 

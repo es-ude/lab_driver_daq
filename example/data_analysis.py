@@ -1,9 +1,9 @@
-from lab_driver.process.mxo4x import (
+from elasticai.hw_measurements.process.mxo4x import (
     load_spectral_data,
     load_fra_data,
     load_transient_data
 )
-from lab_driver.plots import (
+from elasticai.hw_measurements.plots import (
     plot_spectrum_harmonic,
     plot_fra_data,
     plot_transient_data

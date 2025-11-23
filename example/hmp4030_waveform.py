@@ -1,7 +1,7 @@
 import numpy as np
 from time import sleep
-from lab_driver import scan_instruments
-from lab_driver.driver import DriverHMP40X0
+from elasticai.hw_measurements import scan_instruments
+from elasticai.hw_measurements.driver import DriverHMP40X0
 
 
 if __name__ == '__main__':
