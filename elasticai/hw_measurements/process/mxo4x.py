@@ -28,16 +28,15 @@ def load_spectral_data(path: Path, file_name: str, begin_line: int=33) -> Transf
         sampling_rate=1.
     )
 
-def load_fra_data(path: Path, file_name: str, begin_line: int=2) -> FrequencyResponse:
+def load_fra_data(path2file: Path, begin_line: int=2) -> FrequencyResponse:
     """Function for loading the csv files of Frequency Response Analysis (FRA) from R&S MXO44
-    :param path:        path to csv file
-    :param file_name:   name of csv file
+    :param path2file:   Path to csv file
     :param begin_line:  Integer of starting line to extract information from csv
     :return:            Dataclass with FrequencyResponse
     """
     data = CsvHandler(
-        path=str(path),
-        file_name=file_name,
+        path=str(path2file.parent),
+        file_name=path2file.stem,
         delimiter=','
     ).read_data_from_csv(
         include_chapter_line=False,
@@ -51,22 +50,25 @@ def load_fra_data(path: Path, file_name: str, begin_line: int=2) -> FrequencyRes
     )
 
 
-def load_transient_data(path: Path, file_name: str, freq_ref: float) -> TransientData:
+def load_transient_data(path2file: Path, freq_ref: float) -> TransientData:
     data = list()
-    channel = list()
-    with h5py.File(path / file_name, 'r') as f:
+    chan = list()
+    with h5py.File(path2file, 'r') as f:
         groups = list(f['Waveforms'].keys())
         for channel in groups:
             data.append(f['Waveforms'][channel][f'{channel} Data'][...])
-            channel.append(channel)
+            chan.append(channel)
 
     spectrum = do_fft(data[0], 1., 'Hamming')
-    samp_rate = freq_ref / f[np.argmax(spectrum.spec)] * f[-1]
+    samp_rate = freq_ref / spectrum.freq[np.argmax(spectrum.spec)] * spectrum.freq[-1]
 
     data0 = np.array(data)
+    if len(data0.shape) == 1:
+        data0 = np.expand_dims(data0, axis=0)
+
     return TransientData(
         rawdata=data0,
-        timestamps=np.zeros_like(data0),
+        timestamps=np.array([idx/samp_rate for idx in range(len(data[0]))]),
         sampling_rate=samp_rate,
-        channels=channel,
+        channels=chan,
     )
