@@ -42,9 +42,8 @@ class CharacterizationNoise:
         """
         if signal.ndim != 2:
             raise ValueError("Signal shape must be (num_channels, data) - Please adapt!")
-        else:
-            if signal.shape[0] > signal.shape[1]:
-                raise ValueError("Signal shape must be (num_channels, data) - Please adapt!")
+        if signal.shape[0] > signal.shape[1]:
+            raise ValueError("Signal shape must be (num_channels, data) - Please adapt!")
 
         self._fs = float(1 / np.mean(np.diff(time)))
         self._channels = np.arange(signal.shape[0]).tolist()

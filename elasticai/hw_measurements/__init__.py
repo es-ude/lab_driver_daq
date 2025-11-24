@@ -1,5 +1,4 @@
-import numpy as np
-from dataclasses import dataclass
+from .predefines import DriverPort, DriverPortIES
 from .scan_instruments import scan_instruments
 from .data_types import (
     TransientData,
@@ -49,26 +48,3 @@ def init_project_folder(new_folder: str='') -> None:
 
     for folder_name in folder_structure:
         makedirs(join(path2start, folder_name), exist_ok=True)
-
-
-@dataclass(frozen=True)
-class DriverPort:
-    """Class with COM-Port addresses of each device for testing
-    Attributes:
-        com_ngu (str):  COM-Port of the R&S NGU411 (Four-Quadrant SMU)
-        com_dmm (str):  COM-Port of the Keithley DMM411 (Digital Multimeter)
-        com_mxo (str):  COM-Port of the R&S MXO411 (Mixed-Signal Oscilloscope)
-        com_hmp (str):  COM-Port of the R&S HMP40x (Power Supply)
-    """
-    com_ngu: str
-    com_dmm: str
-    com_mxo: str
-    com_hmp: str
-
-
-DriverPortIES = DriverPort(
-    com_ngu='USB0::0x0AAD::0x0197::3639.3763k04-101215::INSTR',
-    com_dmm='USB0::0x05E6::0x6500::04622454::INSTR',
-    com_mxo='',
-    com_hmp='COM7',
-)

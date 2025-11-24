@@ -1,5 +1,6 @@
 from .common import ProcessCommon
 from .data import (
+    do_fft,
     calculate_total_harmonics_distortion_from_transient,
     calculate_total_harmonics_distortion,
     MetricCalculator
