@@ -1,5 +1,5 @@
 import numpy as np
-from os.path import exists, join
+from pathlib import Path
 from unittest import TestCase, main, skip
 from elasticai.hw_measurements import get_path_to_project
 from elasticai.hw_measurements.csv_handler import CsvHandler
@@ -11,7 +11,7 @@ class TestCSV(TestCase):
     data0 = np.array([[1, 2, 3, 1], [4, 5, 6, 7], [7, 8, 9, 0]])
     data1 = np.array([[1e4, 2., 3, 4], [4, 5, 6, 4.58677], [7, 8, 9, 187486.34]])
 
-    path = join(get_path_to_project('temp_test'))
+    path = Path(get_path_to_project('temp_test'))
     file = 'test'
     hndl0 = CsvHandler(
         path=path,
@@ -31,7 +31,7 @@ class TestCSV(TestCase):
             data=self.data0,
             chapter_line=[]
         )
-        chck = exists(join(self.path, 'test_wo.csv'))
+        chck = (self.path / 'test_wo.csv').exists()
         self.assertTrue(chck)
 
     def test_build_file_exists_with_chapter(self):
@@ -43,7 +43,7 @@ class TestCSV(TestCase):
             data=self.data0,
             chapter_line=self.chapter_line
         )
-        chck = exists(join(self.path, 'test_with.csv'))
+        chck = (self.path / 'test_with.csv').exists()
         self.assertTrue(chck)
 
     def test_build_file_with_strings(self):

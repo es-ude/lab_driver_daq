@@ -183,6 +183,8 @@ class CharacterizationNoise:
 
         scale, unit = scale_auto_value(self._spec.spec)
         eff_noise_rms = list()
+        fmin = 0.
+        fmax = 0.
         for f_ch, noise_ch in zip(self._spec.freq, self._spec.spec):
             noise_eff = np.sqrt(np.trapezoid(
                 y=noise_ch ** 2,
@@ -191,7 +193,7 @@ class CharacterizationNoise:
             eff_noise_rms.append(noise_eff)
 
         eff_noise_rms = np.array(eff_noise_rms)
-        print(f"Available RMS noise [{unit}V]: {scale * eff_noise_rms} ({self._freq[1]}-{self._freq[-1]} Hz)")
+        print(f"Available RMS noise [{unit}V]: {scale * eff_noise_rms} ({self._spec.freq[0,0]:.1f}-{self._spec.freq[0,-1]:.1f} Hz)")
         print(f"Available RMS noise over all channels [{unit}V]: "
               f"{np.mean(scale * eff_noise_rms)} +/- {np.std(scale * eff_noise_rms)} "
               f"(num_channels={self.get_num_channels})")

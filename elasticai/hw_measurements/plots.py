@@ -244,7 +244,8 @@ def plot_fra_data(data: FrequencyResponse, num_pol: int=1, file_name: str='', pa
     # --- Plot
     fig, ax1 = plt.subplots()
     ax1.semilogx(data.freq, data.gain, color='k', marker='.', markersize=6)
-
+    ax1.set_xticks(fontsize=get_font_size() - 1)
+    ax1.set_yticks(fontsize=get_font_size() - 1)
     ax1.set_xlim([data.freq[0], data.freq[-1]])
     ax1.set_xlabel(r'Frequency $f$ [Hz]', fontsize=get_font_size())
     ax1.set_ylabel(r'Gain $|H(f)|$ [dB]', color='k', fontsize=get_font_size())

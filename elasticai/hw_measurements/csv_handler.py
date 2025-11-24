@@ -1,34 +1,32 @@
 import numpy as np
 from logging import getLogger, Logger
 from os import makedirs
-from os.path import join, exists, isabs
-from elasticai.hw_measurements import get_path_to_project
+from pathlib import Path
 
 
 class CsvHandler:
     _logger: Logger
     _ending_chck: list = ['.csv']
-    _path2folder: str
+    _path2folder: Path
     _file_name: str
     _delimiter: str
 
-
-    def __init__(self, path: str, file_name: str, delimiter: str=';'):
+    def __init__(self, path: Path, file_name: str, delimiter: str=';'):
         """Creating a class for handling CSV-files
         :param path:        String with path to the folder which has the CSV file
         :param file_name:   String with name of the CSV file
         :param delimiter:   String with delimiter symbol used in the CSV file
         """
         self._logger = getLogger(__name__)
-        self._path2folder = join(get_path_to_project(), path) if not isabs(path) else path
+        self._path2folder = path.absolute()
         self._file_name = self.__remove_ending_from_filename(file_name)
         assert len(delimiter) == 1, 'Please add a delimiter symbol.'
         self._delimiter = delimiter
 
     @property
-    def __path2chck(self) -> str:
+    def __path2chck(self) -> Path:
         """Getting the path to the desired CSV file"""
-        return join(self._path2folder, f"{self._file_name}{self._ending_chck[0]}")
+        return self._path2folder / f"{self._file_name}{self._ending_chck[0]}"
 
     def __remove_ending_from_filename(self, file_name: str) -> str:
         """Function for removing data type ending
@@ -64,7 +62,6 @@ class CsvHandler:
 
         np.savetxt(self.__path2chck, data, **cmds)
 
-
     def read_data_from_csv(self, include_chapter_line: bool = False, start_line: int=0, type_load=int) -> np.array:
         """Reading data in numpy format from csv file
         :param include_chapter_line:    Boolean for including the chapter line
@@ -72,7 +69,8 @@ class CsvHandler:
         :param type_load:               Type of loading and converting csv content to numpy array
         :return:                        Numpy array with data content
         """
-        if not exists(self.__path2chck):
+        print(self.__path2chck)
+        if not self.__path2chck.exists():
             raise FileNotFoundError("CSV does not exists - Please add one!")
         else:
             assert start_line >= 0, "start_line must be larger than 0"
@@ -83,7 +81,7 @@ class CsvHandler:
         """Reading the chapter line in list format from csv file
         :return:    List with chapter lines
         """
-        if not exists(self.__path2chck):
+        if not self.__path2chck.exists():
             raise FileNotFoundError("CSV does not exists - Please add one!")
         else:
             return np.loadtxt(self.__path2chck, delimiter=self._delimiter, dtype=str, skiprows=start_line, max_rows=1).tolist()

@@ -35,7 +35,7 @@ def load_fra_data(path2file: Path, begin_line: int=2) -> FrequencyResponse:
     :return:            Dataclass with FrequencyResponse
     """
     data = CsvHandler(
-        path=str(path2file.parent),
+        path=path2file.parent,
         file_name=path2file.stem,
         delimiter=','
     ).read_data_from_csv(
