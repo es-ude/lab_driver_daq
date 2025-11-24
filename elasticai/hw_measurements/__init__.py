@@ -1,5 +1,13 @@
-from .scan_instruments import scan_instruments
+import numpy as np
 from dataclasses import dataclass
+from .scan_instruments import scan_instruments
+from .data_types import (
+    TransientData,
+    TransformSpectrum,
+    FrequencyResponse,
+    TransientNoiseSpectrum,
+    MetricNoise
+)
 
 
 def get_path_to_project(new_folder: str='', max_levels: int=5) -> str:

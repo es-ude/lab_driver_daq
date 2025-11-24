@@ -1,7 +1,9 @@
 import numpy as np
+from dataclasses import dataclass
 from logging import getLogger, Logger
 from scipy.signal import find_peaks
 from scipy.signal.windows import gaussian
+from elasticai.hw_measurements import TransformSpectrum, TransientData
 from elasticai.hw_measurements.process.common import ProcessCommon
 
 
@@ -26,12 +28,12 @@ def window_method(window_size: int, method: str="hamming") -> np.ndarray:
     return window
 
 
-def do_fft(y: np.ndarray, fs: float, method_window: str='') -> [np.ndarray, np.ndarray]:
+def do_fft(y: np.ndarray, fs: float, method_window: str='') -> TransformSpectrum:
     """Performing the Discrete Fast Fourier Transformation.
     :param y:   Transient input signal
     :param fs:  Sampling rate [Hz]
     :param method_window:   Selected window ['': None, 'Hamming', 'guassian', 'bartlett', 'blackman']
-    :return:    Tuple with (1) freq - Frequency and (2) Y - Discrete output
+    :return:    Dataclass TransformSpectrum with spectrum data
     """
     fft_in = y
     if method_window:
@@ -46,26 +48,28 @@ def do_fft(y: np.ndarray, fs: float, method_window: str='') -> [np.ndarray, np.n
     xsel = np.where(freq >= 0)
     fft_out = fft_out[xsel]
     freq = freq[xsel]
-    return freq, fft_out
+    return TransformSpectrum(
+        freq=freq,
+        spec=fft_out,
+        sampling_rate=fs
+    )
 
 
-def calculate_total_harmonics_distortion(freq: np.ndarray, spectral: np.ndarray, N_harmonics: int=4) -> float:
+def calculate_total_harmonics_distortion(data: TransformSpectrum, N_harmonics: int=4) -> float:
     """Calculating the Total Harmonics Distortion (THD) of spectral input
-    Args:
-        freq:           Array with frequency values for spectral analysis
-        spectral:       Array with Spectral input
-        N_harmonics:    Number of used harmonics for calculating THD
+    :param data:        Dataclass TransformSpectrum
+    :param N_harmonics: Number of used harmonics for calculating THD
     Return:
           THD value (in dB) and corresponding frequency positions of peaks
     """
-    fsine = freq[np.argmax(spectral).flatten()[0]]
+    fsine = data.freq[np.argmax(data.spec).flatten()[0]]
     # --- Limiting the search space
-    pos_x0 = np.argwhere(freq >= 0.5 * fsine).flatten()[0]
-    pos_x1 = np.argwhere(freq >= (N_harmonics + 1.5) * fsine).flatten()[0]
-    search_y = spectral[pos_x0:pos_x1]
+    pos_x0 = np.argwhere(data.freq >= 0.5 * fsine).flatten()[0]
+    pos_x1 = np.argwhere(data.freq >= (N_harmonics + 1.5) * fsine).flatten()[0]
+    search_y = data.spec[pos_x0:pos_x1]
 
     # --- Getting peaks values
-    df = np.mean(np.diff(freq))
+    df = np.mean(np.diff(data.freq))
     xpos, _ = find_peaks(search_y, distance=int(0.8 * fsine / df))
     peaks_y = search_y[xpos]
 
@@ -82,13 +86,12 @@ def calculate_total_harmonics_distortion_from_transient(signal: np.ndarray, fs: 
     Return:
           THD value (in dB)
     """
-    freq, spectral = do_fft(
+    spectrum = do_fft(
         y=signal,
         fs=fs
     )
     return calculate_total_harmonics_distortion(
-        freq=freq,
-        spectral=spectral,
+        data=spectrum,
         N_harmonics=N_harmonics
     )
 
@@ -209,20 +212,20 @@ class MetricCalculator(ProcessCommon):
         :return:            THD value (in dB)
         """
         # --- calculate spectral input
-        freq, spectral = do_fft(
+        spectral: TransformSpectrum = do_fft(
             y=signal,
             fs=fs,
             method_window='hamming'
         )
 
         # --- Limiting the search space
-        fsine = float(freq[np.argmax(spectral).flatten()][0])
-        pos_x0 = np.argwhere(freq >= 0.5 * fsine).flatten()[0]
-        pos_x1 = np.argwhere(freq >= (N_harmonics + 1.5) * fsine).flatten()[0]
-        search_y = spectral[pos_x0:pos_x1]
+        fsine = float(spectral.freq[np.argmax(spectral.spec).flatten()][0])
+        pos_x0 = np.argwhere(spectral.freq >= 0.5 * fsine).flatten()[0]
+        pos_x1 = np.argwhere(spectral.freq >= (N_harmonics + 1.5) * fsine).flatten()[0]
+        search_y = spectral.spec[pos_x0:pos_x1]
 
         # --- Getting peaks values
-        df = np.mean(np.diff(freq))
+        df = np.mean(np.diff(spectral.freq))
         xpos, _ = find_peaks(search_y, distance=int(0.8 * fsine / df))
         peaks_y = search_y[xpos]
 

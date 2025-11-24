@@ -1,6 +1,8 @@
 import numpy as np
+from dataclasses import dataclass
 from logging import getLogger, Logger
 from scipy.signal import welch, find_peaks
+from elasticai.hw_measurements import TransientNoiseSpectrum, MetricNoise
 from elasticai.hw_measurements.plots import scale_auto_value
 
 
@@ -60,9 +62,9 @@ class CharacterizationNoise:
             self._freq.pop(item - idx)
             self._channels.pop(item - idx)
 
-    def extract_transient_metrics(self) -> dict:
+    def extract_transient_metrics(self) -> MetricNoise:
         """Function for extracting some metrics from transient measurement data
-        :return:    Dictionary with metrics in keys: like offset, peak-peak-noise, sampling rate
+        :return:    Dataclass MetricNoise with metrics
         """
         if len(self._channels) == 0:
             raise ValueError("Data is not loaded. Please load data first.")
@@ -74,7 +76,8 @@ class CharacterizationNoise:
         peak_pos = np.max(self._signal-offset, axis=-1)
         peak_neg = np.min(self._signal-offset, axis=-1)
         peak_peak = peak_pos - peak_neg
-        self._metric = dict(
+
+        self._metric = MetricNoise(
             offset_mean=offset_mean,
             offset_mead=offset_mead,
             peak_peak=peak_peak,
@@ -82,11 +85,11 @@ class CharacterizationNoise:
         )
         return self._metric
 
-    def extract_noise_power_distribution(self, scale: float=1.0, num_segments: int=16354) -> dict:
+    def extract_noise_power_distribution(self, scale: float=1.0, num_segments: int=16354) -> TransientNoiseSpectrum:
         """Function to extract noise power distribution from transient measurement
         :param scale:           Floating value to scale the transient measurement, e.g. to scale the digital output to voltage
         :param num_segments:    Number of samples in the noise spectral density
-        :return:                Dictionary of the spectrum with keys: freq, spec and chan
+        :return:                Dataclass of TransientNoiseSpectrum
         """
         if len(self._channels) == 0:
             raise ValueError("Data is not loaded. Please load data first.")
@@ -108,7 +111,7 @@ class CharacterizationNoise:
 
         self._spec = NPow
         self._freq = freq
-        return dict(
+        return TransientNoiseSpectrum(
             freq=freq,
             spec=NPow,
             chan=self._channels
@@ -124,11 +127,11 @@ class CharacterizationNoise:
                 continue
         return result
 
-    def remove_power_line_noise(self, tolerance: float=5., num_harmonics: int=10) -> dict:
+    def remove_power_line_noise(self, tolerance: float=5., num_harmonics: int=10) -> TransientNoiseSpectrum:
         """Function for removing the power line noise in the spectrum
         :param tolerance:       Floating tolerance value around the power line frequency (= 50 Hz)
         :param num_harmonics:   Number of harmonics to remove
-        :return:                Dictionary with the new spectrum - keys: freq, spec and chan
+        :return:                Dataclass of TransientNoiseSpectrum
         """
         pl_line_freq = 50.
         if len(self._channels) == 0:
@@ -157,7 +160,7 @@ class CharacterizationNoise:
         else:
             noise_spectrum_new = self._spec
 
-        return dict(
+        return TransientNoiseSpectrum(
             freq=self._freq,
             spec=noise_spectrum_new,
             chan=self._channels,

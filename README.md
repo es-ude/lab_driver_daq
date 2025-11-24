@@ -12,11 +12,7 @@ We recommended to install all python packages for using this API with a virtual 
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ````
 Afterwards with ``uv sync``, the venv will be created and all necessary packages will be installed.
-````
-uv venv
-.\.venv\Scripts\activate  
-uv sync
-````
+
 ### Necessary drivers
 For using the modules, it is necessary to install the VISA drivers for your OS in order to identify the USB devices, which will be known as IVI device. If you do not do this, then no access is available.
 You can download it [here](https://www.rohde-schwarz.com/de/driver-pages/fernsteuerung/3-visa-und-tools_231388.html).

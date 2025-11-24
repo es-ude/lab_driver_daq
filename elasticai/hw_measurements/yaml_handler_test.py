@@ -47,7 +47,7 @@ class TestYamlHandler(unittest.TestCase):
     )
 
     def test_project_path(self):
-        ref = ['driver_meas_dev', 'lab_driver_daq', 'lab_driver', "elasticai"]
+        ref = ["elastic-ai", "hw-measurements"]
         chck = get_path_to_project()
         result = ref[0] in chck or ref[1] in chck or ref[2] in chck
         self.assertTrue(result)

@@ -45,7 +45,7 @@ class TestNoise(TestCase):
             scale=1.0,
             num_segments=1000
         )
-        np.testing.assert_array_almost_equal(rslt["spec"], np.zeros_like(rslt["spec"]) + self.noise_density, decimal=7)
+        np.testing.assert_array_almost_equal(rslt.spec, np.zeros_like(rslt.spec) + self.noise_density, decimal=7)
 
     def test_noise_rms_resistor(self):
         self.dut.extract_noise_power_distribution(

@@ -184,14 +184,12 @@ class TestDataAnalysis(unittest.TestCase):
         t = np.linspace(0, 1, sampling_rate, endpoint=True)
         signal = np.sin(2 * np.pi * 50 * t) + 0.1 * np.sin(2 * np.pi * 100 * t) + 0.05 * np.sin(2 * np.pi * 150 * t)
 
-        freq, spec = do_fft(
+        spectrum = do_fft(
             y=signal,
             fs=sampling_rate,
         )
-
         rslt = calculate_total_harmonics_distortion(
-            freq=freq,
-            spectral=spec,
+            data=spectrum,
             N_harmonics=2
         )
         self.assertEqual(rslt, -19.300251257175265)

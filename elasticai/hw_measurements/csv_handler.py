@@ -64,6 +64,7 @@ class CsvHandler:
 
         np.savetxt(self.__path2chck, data, **cmds)
 
+
     def read_data_from_csv(self, include_chapter_line: bool = False, start_line: int=0, type_load=int) -> np.array:
         """Reading data in numpy format from csv file
         :param include_chapter_line:    Boolean for including the chapter line
