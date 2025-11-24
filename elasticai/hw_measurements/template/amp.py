@@ -2,7 +2,7 @@ from os.path import join, dirname, basename
 from glob import glob
 from time import sleep
 from logging import getLogger, Logger
-from elasticai.hw_measurements import get_repo_name, get_path_to_project, init_project_folder, DriverPort, DriverPortIES
+from elasticai.hw_measurements import get_path_to_project, init_project_folder, DriverPort, DriverPortIES
 from elasticai.hw_measurements.driver import DriverNGUX01, DriverDMM6500
 from elasticai.hw_measurements.charac.amp import CharacterizationAmplifier
 
@@ -11,7 +11,6 @@ class TestHandlerAmplifier:
     _hndl_test: CharacterizationAmplifier
     _hndl_src: DriverNGUX01
     _hndl_daq: DriverDMM6500
-    __ref_folder: str = get_repo_name()
     _logger: Logger = getLogger(__name__)
     _en_debug: bool = False
     _file_name: str
@@ -25,7 +24,7 @@ class TestHandlerAmplifier:
         :param only_plot:   Boolean for plotting mode (default=False)
         """
         init_project_folder()
-        self._hndl_test = CharacterizationAmplifier(folder_reference=self.__ref_folder)
+        self._hndl_test = CharacterizationAmplifier()
         system_id = int(self._hndl_test.settings.system_id)
         self._file_name = f'{self._hndl_test.settings.get_date_string()}_{self._search_index}_charac_id-{system_id:03d}'
         self._folder_name = join(get_path_to_project(), "runs")

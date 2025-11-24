@@ -1,5 +1,4 @@
 import numpy as np
-from dataclasses import dataclass
 from logging import getLogger, Logger
 from scipy.signal import welch, find_peaks
 from elasticai.hw_measurements import TransientNoiseSpectrum, MetricNoise
@@ -14,7 +13,7 @@ class CharacterizationNoise:
     _signal: np.ndarray
     _freq: list[np.ndarray]
     _spec: list[np.ndarray]
-    _metric: dict = dict()
+    _metric: MetricNoise
 
     def __init__(self) -> None:
         """Class for analysing transient measurement to extract noise properties"""
@@ -112,8 +111,8 @@ class CharacterizationNoise:
         self._spec = NPow
         self._freq = freq
         return TransientNoiseSpectrum(
-            freq=freq,
-            spec=NPow,
+            freq=np.array(freq),
+            spec=np.array(NPow),
             chan=self._channels
         )
 

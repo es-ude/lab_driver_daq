@@ -47,7 +47,7 @@ def extract_noise_properties(func_data_loading, overview_data: list, exclude_cha
             show_plot=False
         )
         plot_spectrum_noise(
-            data=[noise],
+            data=noise,
             path2save=file_take,
             file_name=file_take,
             show_plot=False,

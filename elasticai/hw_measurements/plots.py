@@ -186,23 +186,30 @@ def plot_spectrum_harmonic(data: TransformSpectrum, N_harmonics: int=6, file_nam
     plt.xticks(fontsize=get_font_size()-1)
     plt.yticks(fontsize=get_font_size()-1)
     plt.xlabel(r'Frequency $f$' + f" [{unit_x}Hz]", fontsize=get_font_size())
-    plt.ylabel(r'Spectral Amplitude $\hat{Y}(f)$ [dB]', fontsize=get_font_size())
+    if is_input_db:
+        plt.ylabel(r'Spectral Amplitude $\hat{Y}(f)$ [dB]', fontsize=get_font_size())
+    else:
+        plt.ylabel(r'Spectral Amplitude $\hat{Y}(f)$ [V]', fontsize=get_font_size())
     plt.legend(loc="best", fontsize=get_font_size())
 
-    thd = calculate_total_harmonics_distortion(
+    new_data = TransformSpectrum(
         freq=data.freq[delta_peaks:],
-        spectral=data.spec[delta_peaks:] if not is_input_db else 10 ** (data.spec[delta_peaks:] / 20),
+        spec=data.spec[delta_peaks:] if not is_input_db else 10 ** (data.spec[delta_peaks:] / 20),
+        sampling_rate=data.sampling_rate
+    )
+    thd = calculate_total_harmonics_distortion(
+        data=new_data,
         N_harmonics=N_harmonics
     )
     if show_metric:
         plt.title(f'THD = {thd:.2f} dB', fontsize=get_font_size())
+    else:
+        print(f"THD = {thd:.2f} dB")
     plt.grid()
     plt.tight_layout()
 
     if path2save:
-        file_folder = Path(path2save).parent
-        filename_wo_ext = Path(file_name).stem
-        save_figure(plt, path=file_folder, name=f'{filename_wo_ext}_spectral', formats=['pdf', 'svg', 'eps'])
+        save_figure(plt, path=path2save, name=f'{file_name}_spectral', formats=['pdf', 'svg', 'eps'])
     if show_plot:
         plt.show(block=True)
 
@@ -251,8 +258,7 @@ def plot_fra_data(data: FrequencyResponse, num_pol: int=1, file_name: str='', pa
 
     plt.tight_layout()
     if path2save and file_name:
-        filename_wo_ext = Path(file_name).stem
-        save_figure(plt, path=path2save, name=f'{filename_wo_ext}_fra',  formats=['pdf', 'svg', 'eps'])
+        save_figure(plt, path=path2save, name=f'{file_name}_fra',  formats=['pdf', 'svg', 'eps'])
     if show_plot:
         plt.show(block=True)
 
@@ -267,6 +273,7 @@ def plot_transient_data(data: list[TransientData], file_name: str='', path2save:
     :return:            None
     """
     for data_ch in data:
+        key = f"CH{data_ch.channels[0]}"
         spec: TransformSpectrum = do_fft(data_ch.rawdata, data_ch.sampling_rate, 'Hamming')
         plot_spectrum_harmonic(
             data=spec,
@@ -288,8 +295,7 @@ def plot_transient_data(data: list[TransientData], file_name: str='', path2save:
         plt.tight_layout()
 
         if path2save and file_name:
-            filename_wo_ext = Path(file_name).stem
-            save_figure(plt, path=path2save, name=f'{filename_wo_ext}_transient', formats=['pdf', 'svg', 'eps'])
+            save_figure(plt, path=path2save, name=f'{file_name}_transient', formats=['pdf', 'svg', 'eps'])
         if show_plot:
             plt.show(block=True)
 
@@ -297,7 +303,7 @@ def plot_transient_data(data: list[TransientData], file_name: str='', path2save:
 def plot_transient_noise(data: list[TransientData], offset: np.ndarray, scale: float=1.0,
                          xzoom: list=[0, -1], file_name: str="noise", path2save: str="", show_plot: bool=False) -> None:
     """Plotting content from transient measurements for extracting noise properties
-    :param signal:      List with dataclass TransientData to visualize results
+    :param data:        List with dataclass TransientData
     :param offset:      Numpy array with offset, shape: (num_channels, )
     :param scale:       Floating value with y-scaling value [Default: 1.0 --> ADC output, else Voltage]
     :param xzoom:       List with xzoom values
@@ -310,31 +316,29 @@ def plot_transient_noise(data: list[TransientData], offset: np.ndarray, scale: f
         scale_y = 1.0
         unit_y = ''
     else:
-        scale_y, unit_y = scale_auto_value(scale * signal)
+        scale_y, unit_y = scale_auto_value(data[0].rawdata)
 
     plt.figure()
-    for idx, dat0 in enumerate(data):
-        plt.plot(dat0.timestamps, scale_y * scale * (dat0.rawdata - off0), label=f"CH{idx}", color=get_plot_color(idx))
+    for idx, (dat0, off0) in enumerate(zip(data, offset)):
+        plt.plot(dat0.timestamps, scale_y * scale * (dat0.rawdata - offset), label=f"CH{idx}", color=get_plot_color(idx))
 
     plt.xlabel(r"Time $t$ [s]", size=get_font_size())
     if scale == 1.0:
         plt.ylabel("ADC output", size=get_font_size())
     else:
         plt.ylabel(f"Voltage output [{unit_y}V]", size=get_font_size())
-    plt.xlim([time[xzoom[0]], time[xzoom[1]]])
+    plt.xlim([data[0].timestamps[xzoom[0]], data[0].timestamps[xzoom[1]]])
     plt.legend(loc="upper left", fontsize=get_font_size())
     plt.grid(True)
     plt.tight_layout()
 
     if path2save and file_name:
-        save_path = Path(path2save).parent
-        filename_wo_ext = Path(file_name).stem
-        save_figure(plt, path=save_path, name=f'{filename_wo_ext}_noise_tran', formats=['pdf', 'svg', 'eps'])
+        save_figure(plt, path=path2save, name=f'{file_name}_noise_tran', formats=['pdf', 'svg', 'eps'])
     if show_plot:
         plt.show()
 
 
-def plot_spectrum_noise(data: list[TransientNoiseSpectrum], file_name: str="noise", path2save: str="", show_plot: bool=False) -> None:
+def plot_spectrum_noise(data: TransientNoiseSpectrum, file_name: str="noise", path2save: str="", show_plot: bool=False) -> None:
     """Plotting the noise amplitude spectral density from transient measurements for extracting noise properties
     :param data:        List with dataclass TransientNoiseSpectrum
     :param file_name:   String with file name of the saved figure
@@ -348,9 +352,8 @@ def plot_spectrum_noise(data: list[TransientNoiseSpectrum], file_name: str="nois
     freq_dec_max = 10 ** np.ceil(np.log10(freq_max))
 
     plt.figure()
-    ylabel = [f"CH{ch}" for ch in channels]
-    for idx, (dat0, label) in enumerate(zip(data, ylabel)):
-        plt.loglog(dat0.freq, scale_y * dat0.spec, label=label, color=get_plot_color(idx))
+    for idx, (dat0, label) in enumerate(zip(data.spec, data.chan)):
+        plt.loglog(dat0.freq, scale_y * dat0.spec, label=f"CH{label}", color=get_plot_color(idx))
 
     plt.xlim([freq_min, freq_dec_max])
     plt.ylabel("Noise spectral density [" + unit_y + r"V/$\sqrt{Hz}$]", size=get_font_size())
@@ -362,8 +365,6 @@ def plot_spectrum_noise(data: list[TransientNoiseSpectrum], file_name: str="nois
     plt.grid(True)
 
     if path2save and file_name:
-        save_path = Path(path2save).parent
-        filename_wo_ext = Path(file_name).stem
-        save_figure(plt, path=save_path, name=f'{filename_wo_ext}_noise_spec', formats=['pdf', 'svg', 'eps'])
+        save_figure(plt, path=path2save, name=f'{file_name}_noise_spec', formats=['pdf', 'svg', 'eps'])
     if show_plot:
         plt.show()
