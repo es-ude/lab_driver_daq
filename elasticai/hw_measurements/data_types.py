@@ -11,7 +11,11 @@ class TransientData:
 
     @property
     def size(self) -> int:
-        return self.rawdata.size
+        return self.rawdata.shape[-1]
+
+    @property
+    def num_channels(self) -> int:
+        return self.rawdata.shape[0]
 
 
 @dataclass(frozen=True)
