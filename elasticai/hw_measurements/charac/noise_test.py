@@ -17,21 +17,24 @@ class TestNoise(TestCase):
         self.dut = CharacterizationNoise()
         self.dut.load_data(
             time=time,
-            signal=np.expand_dims(signal, axis=0)
+            signal=np.expand_dims(signal, axis=0),
+            channels=[0]
         )
 
     def test_load_data_wrong_format_single(self):
         with self.assertRaises(ValueError):
             self.dut.load_data(
                 time=np.linspace(start=0.0, stop=1.0, num=101, endpoint=True),
-                signal=np.zeros((101, ))
+                signal=np.zeros((101, )),
+                channels=[0]
             )
 
     def test_load_data_wrong_format_dual(self):
         with self.assertRaises(ValueError):
             self.dut.load_data(
                 time=np.linspace(start=0.0, stop=1.0, num=101, endpoint=True),
-                signal=np.zeros((101, 1))
+                signal=np.zeros((101, 1)),
+                channels=[0]
             )
 
     def test_sampling_rate(self):

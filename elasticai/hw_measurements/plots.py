@@ -51,7 +51,7 @@ def scale_auto_value(data: np.ndarray | float) -> [float, str]:
     ref_dict = {'T': -4, 'G': -3, 'M': -2, 'k': -1, '': 0, 'm': 1, 'µ': 2, 'n': 3, 'p': 4, 'f': 5}
 
     value = np.max(np.abs(data)) if isinstance(data, np.ndarray) else data
-    str_value = str(value).split('.')
+    str_value = str(float(value)).split('.')
     digit = 0
     if 'e' not in str_value[1]:
         if not str_value[0] == '0':
@@ -263,7 +263,7 @@ def plot_fra_data(data: FrequencyResponse, num_pol: int=1, file_name: str='', pa
         plt.show(block=True)
 
 
-def plot_transient_data(data: list[TransientData], file_name: str='', path2save: str='', show_plot: bool=False, xzoom: list=[0, -1]) -> None:
+def plot_transient_data(data: TransientData, file_name: str='', path2save: str='', show_plot: bool=False, xzoom: list=[0, -1]) -> None:
     """Plotting content from transient measurements for extracting Total Harmonic Distortion (THD)
     :param data:        List with dataclass TransientData
     :param file_name:   String with file name of the saved figure
@@ -272,9 +272,12 @@ def plot_transient_data(data: list[TransientData], file_name: str='', path2save:
     :param xzoom:       List with xzoom values
     :return:            None
     """
-    for data_ch in data:
-        key = f"CH{data_ch.channels[0]}"
-        spec: TransformSpectrum = do_fft(data_ch.rawdata, data_ch.sampling_rate, 'Hamming')
+    for data_ch, key in zip(data.rawdata, data.channels):
+        spec: TransformSpectrum = do_fft(
+            y=data_ch,
+            fs=data.sampling_rate,
+            method_window='Hamming'
+        )
         plot_spectrum_harmonic(
             data=spec,
             N_harmonics=10,
@@ -286,8 +289,8 @@ def plot_transient_data(data: list[TransientData], file_name: str='', path2save:
         f_start = np.power(10, np.floor(np.log10(spec.freq[np.argmax(spec.spec)])))
 
         fig, axs = plt.subplots(nrows=2, ncols=1)
-        axs[0].plot(data_ch.timestamps, data_ch.rawdata, 'k', label=key)
-        axs[0].set_xlim([data_ch.timestamps[xzoom[0]], data_ch.timestamps[xzoom[1]]])
+        axs[0].plot(data.timestamps, data_ch, 'k', label=key)
+        axs[0].set_xlim([data.timestamps[xzoom[0]], data.timestamps[xzoom[1]]])
         axs[1].loglog(spec.freq, spec.spec, 'k', label=key)
         axs[1].set_xlim([f_start, spec.freq[-1]])
         for ax in axs:
@@ -300,7 +303,7 @@ def plot_transient_data(data: list[TransientData], file_name: str='', path2save:
             plt.show(block=True)
 
 
-def plot_transient_noise(data: list[TransientData], offset: np.ndarray, scale: float=1.0,
+def plot_transient_noise(data: TransientData, offset: np.ndarray, scale: float=1.0,
                          xzoom: list=[0, -1], file_name: str="noise", path2save: str="", show_plot: bool=False) -> None:
     """Plotting content from transient measurements for extracting noise properties
     :param data:        List with dataclass TransientData
@@ -316,18 +319,18 @@ def plot_transient_noise(data: list[TransientData], offset: np.ndarray, scale: f
         scale_y = 1.0
         unit_y = ''
     else:
-        scale_y, unit_y = scale_auto_value(data[0].rawdata)
+        scale_y, unit_y = scale_auto_value(data.rawdata)
 
     plt.figure()
-    for idx, (dat0, off0) in enumerate(zip(data, offset)):
-        plt.plot(dat0.timestamps, scale_y * scale * (dat0.rawdata - offset), label=f"CH{idx}", color=get_plot_color(idx))
+    for idx, (dat0, off0, key) in enumerate(zip(data.rawdata, offset, data.channels)):
+        plt.plot(data.timestamps, scale_y * scale * (dat0 - off0), label=key, color=get_plot_color(idx))
 
     plt.xlabel(r"Time $t$ [s]", size=get_font_size())
     if scale == 1.0:
         plt.ylabel("ADC output", size=get_font_size())
     else:
         plt.ylabel(f"Voltage output [{unit_y}V]", size=get_font_size())
-    plt.xlim([data[0].timestamps[xzoom[0]], data[0].timestamps[xzoom[1]]])
+    plt.xlim([data.timestamps[xzoom[0]], data.timestamps[xzoom[1]]])
     plt.legend(loc="upper left", fontsize=get_font_size())
     plt.grid(True)
     plt.tight_layout()
@@ -346,14 +349,14 @@ def plot_spectrum_noise(data: TransientNoiseSpectrum, file_name: str="noise", pa
     :param show_plot:   Boolean for showing the plot
     :return:            None
     """
-    scale_y, unit_y = scale_auto_value(data[0].spec)
-    freq_min = np.min(np.array([dat0.freq[0] if not dat0.freq[1] == 0. else dat0.freq[1] for dat0 in data]))
-    freq_max = np.max(np.array([dat0.freq.max() for dat0 in data]))
+    scale_y, unit_y = scale_auto_value(data.spec)
+    freq_min = np.min(np.array([dat0[0] if not dat0[1] == 0. else dat0[1] for dat0 in data.freq]))
+    freq_max = np.max(np.array([dat0.max() for dat0 in data.freq]))
     freq_dec_max = 10 ** np.ceil(np.log10(freq_max))
 
     plt.figure()
-    for idx, (dat0, label) in enumerate(zip(data.spec, data.chan)):
-        plt.loglog(dat0.freq, scale_y * dat0.spec, label=f"CH{label}", color=get_plot_color(idx))
+    for idx, (frq0, dat0, label) in enumerate(zip(data.freq, data.spec, data.chan)):
+        plt.loglog(frq0, scale_y * dat0, label=label, color=get_plot_color(idx))
 
     plt.xlim([freq_min, freq_dec_max])
     plt.ylabel("Noise spectral density [" + unit_y + r"V/$\sqrt{Hz}$]", size=get_font_size())

@@ -8,11 +8,10 @@ from elasticai.hw_measurements.plots import scale_auto_value
 class CharacterizationNoise:
     _logger: Logger
     _fs: float
-    _channels: list[int] = []
     _time: np.ndarray
     _signal: np.ndarray
-    _freq: list[np.ndarray]
-    _spec: list[np.ndarray]
+    _channels: list[str]
+    _spec: TransientNoiseSpectrum
     _metric: MetricNoise
 
     def __init__(self) -> None:
@@ -34,7 +33,7 @@ class CharacterizationNoise:
         """Return the number of channels"""
         return len(self._channels)
 
-    def load_data(self, time: np.ndarray, signal: np.ndarray) -> None:
+    def load_data(self, time: np.ndarray, signal: np.ndarray, channels: list) -> None:
         """Function for loading the measurement data into the class
         :param time:    Numpy array with time information [shape: (num of samples, )]
         :param signal:  Numpy array with noise information [shape: (num of channels, num of samples)]
@@ -46,19 +45,30 @@ class CharacterizationNoise:
             raise ValueError("Signal shape must be (num_channels, data) - Please adapt!")
 
         self._fs = float(1 / np.mean(np.diff(time)))
-        self._channels = np.arange(signal.shape[0]).tolist()
+
         self._time = time
         self._signal = signal
+        self._channels = channels
 
     def exclude_channels_from_spec(self, exclude_channel: list) -> None:
         """Function for excluding channels to extract the noise spectrum density
         :param exclude_channel: List of channels to exclude
         :return:                None
         """
+        data_freq = self._spec.freq.tolist()
+        data_spec = self._spec.spec.tolist()
+        data_chan = self._spec.chan
+
         for idx, item in enumerate(exclude_channel):
-            self._spec.pop(item - idx)
-            self._freq.pop(item - idx)
-            self._channels.pop(item - idx)
+            data_freq.pop(item - idx)
+            data_spec.pop(item - idx)
+            data_chan.pop(item - idx)
+
+        self._spec = TransientNoiseSpectrum(
+            freq=np.array(data_freq),
+            spec=np.array(data_spec),
+            chan=data_chan
+        )
 
     def extract_transient_metrics(self) -> MetricNoise:
         """Function for extracting some metrics from transient measurement data
@@ -107,13 +117,12 @@ class CharacterizationNoise:
             freq.append(f)
             NPow.append(np.sqrt(Pxx))
 
-        self._spec = NPow
-        self._freq = freq
-        return TransientNoiseSpectrum(
+        self._spec = TransientNoiseSpectrum(
             freq=np.array(freq),
             spec=np.array(NPow),
             chan=self._channels
         )
+        return self._spec
 
     @staticmethod
     def _get_values_around_multiples(data: list, reference: float, num_harmonics: int, tolerance: float=2.0) -> list:
@@ -135,9 +144,9 @@ class CharacterizationNoise:
         if len(self._channels) == 0:
             raise ValueError("Data is not loaded. Please load data first.")
 
-        peak_freq = self._freq[0][find_peaks(
-            x=self._spec[0],
-            distance=int(0.9*pl_line_freq / self._freq[0][1]),
+        peak_freq = self._spec.freq[0,:][find_peaks(
+            x=self._spec.spec[0,:],
+            distance=int(0.9*pl_line_freq / self._spec.freq[0,:][1]),
         )[0]]
         pl_peak_freq = self._get_values_around_multiples(
             data=peak_freq,
@@ -148,20 +157,20 @@ class CharacterizationNoise:
         if pl_peak_freq:
             df = 0.5
             noise_spectrum_new = list()
-            for f_ch, noise_ch in zip(self._freq, self._spec):
+            for f_ch, noise_ch in zip(self._spec.freq, self._spec.spec):
                 for pl_f0 in pl_peak_freq:
                     mask = (f_ch >= pl_f0 - df) & (f_ch <= pl_f0 + df)
                     mask_pos = np.argwhere(mask == True).flatten()
                     if mask_pos.size > 0:
                         noise_ch[mask_pos] = noise_ch[mask_pos[0]-1]
-                    noise_spectrum_new.append(noise_ch)
+                noise_spectrum_new.append(noise_ch)
         else:
             noise_spectrum_new = self._spec
 
         return TransientNoiseSpectrum(
-            freq=self._freq,
-            spec=noise_spectrum_new,
-            chan=self._channels,
+            freq=self._spec.freq,
+            spec=np.array(noise_spectrum_new),
+            chan=self._spec.chan,
         )
 
     def extract_noise_rms(self) -> np.ndarray:
@@ -171,9 +180,9 @@ class CharacterizationNoise:
         if len(self._channels) == 0:
             raise ValueError("Data is not loaded. Please load data first.")
 
-        scale, unit = scale_auto_value(self._spec[0])
+        scale, unit = scale_auto_value(self._spec.spec)
         eff_noise_rms = list()
-        for f_ch, noise_ch in zip(self._freq, self._spec):
+        for f_ch, noise_ch in zip(self._spec.freq, self._spec.spec):
             noise_eff = np.sqrt(np.trapezoid(
                 y=noise_ch ** 2,
                 x=f_ch,

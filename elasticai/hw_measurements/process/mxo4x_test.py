@@ -36,6 +36,8 @@ class TestMXO4X(TestCase):
         assert data.rawdata.shape == (2, 2000000)
         assert data.sampling_rate == 249999.75
         assert data.timestamps.shape == (2000000,)
+        assert data.timestamps.size == data.rawdata.shape[1]
+        assert data.num_channels == data.rawdata.shape[0]
 
 
 if __name__ == "__main__":

@@ -1,8 +1,7 @@
 from pathlib import Path
-from elasticai.hw_measurements import TransientData, TransformSpectrum, TransientNoiseSpectrum, MetricNoise
+from elasticai.hw_measurements import TransientData, TransientNoiseSpectrum, MetricNoise
 from elasticai.hw_measurements.charac import CharacterizationNoise
-from elasticai.hw_measurements.plots import plot_spectrum_noise, plot_transient_noise, plot_spectrum_harmonic
-from elasticai.hw_measurements.process import do_fft
+from elasticai.hw_measurements.plots import plot_spectrum_noise, plot_transient_noise
 
 
 def extract_noise_metrics(data: TransientData, exclude_channels: list, path2file: Path,
@@ -19,7 +18,8 @@ def extract_noise_metrics(data: TransientData, exclude_channels: list, path2file
     dut = CharacterizationNoise()
     dut.load_data(
         time=data.timestamps,
-        signal=data.rawdata
+        signal=data.rawdata,
+        channels=data.channels
     )
     metrics: MetricNoise = dut.extract_transient_metrics()
     dut.extract_noise_power_distribution(
@@ -34,7 +34,7 @@ def extract_noise_metrics(data: TransientData, exclude_channels: list, path2file
 
     # --- Plotting
     plot_transient_noise(
-        data=[data],
+        data=data,
         offset=metrics.offset_mean,
         scale=scale_adc,
         path2save=str(path2file.parent),
@@ -45,18 +45,5 @@ def extract_noise_metrics(data: TransientData, exclude_channels: list, path2file
         data=noise,
         path2save=str(path2file.parent),
         file_name=path2file.stem,
-        show_plot=False,
-    )
-
-    spec: TransformSpectrum = do_fft(
-        y=scale_adc * data.rawdata[7, :],
-        fs=dut.get_sampling_rate,
-        method_window='Hamming',
-    )
-    plot_spectrum_harmonic(
-        data=spec,
-        N_harmonics=8,
-        path2save=str(path2file.parent),
-        file_name=path2file.stem,
-        show_plot=show_plots
+        show_plot=show_plots,
     )

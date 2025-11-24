@@ -60,7 +60,7 @@ def load_transient_data(path2file: Path, freq_ref: float) -> TransientData:
             chan.append(channel)
 
     spectrum = do_fft(data[0], 1., 'Hamming')
-    samp_rate = freq_ref / spectrum.freq[np.argmax(spectrum.spec)] * spectrum.freq[-1]
+    samp_rate = float(freq_ref / spectrum.freq[np.argmax(spectrum.spec)] * spectrum.freq[-1])
 
     data0 = np.array(data)
     if len(data0.shape) == 1:

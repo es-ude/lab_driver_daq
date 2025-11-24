@@ -3,7 +3,7 @@ This Python package provides APIs for handling the measurement devices within th
 This is also part of the elastic AI ecosystem for deploying deep learning techniques on heterogenious platform (MCU+FPGA/ASIC). 
 
 ## Using the package release in other Repos
-Just adding this repo in the pyproject.toml file as dependencies by listing the git path.
+Just adding this repo in the pyproject.toml file as dependencies by listing the git path. A detailed example is given in this [Python file](example/data_analysis.py).
 
 ## Installation
 ### Python for Developing
