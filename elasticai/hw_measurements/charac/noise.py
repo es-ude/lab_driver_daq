@@ -24,7 +24,7 @@ class CharacterizationNoise:
         return self._fs
 
     @property
-    def get_channels_overview(self) -> list[int]:
+    def get_channels_overview(self) -> list:
         """Returning a list with available channels to analyse"""
         return self._channels
 
@@ -37,6 +37,7 @@ class CharacterizationNoise:
         """Function for loading the measurement data into the class
         :param time:    Numpy array with time information [shape: (num of samples, )]
         :param signal:  Numpy array with noise information [shape: (num of channels, num of samples)]
+        :param channels:List of channel name
         :return:        None
         """
         if signal.ndim != 2:
@@ -165,7 +166,7 @@ class CharacterizationNoise:
                         noise_ch[mask_pos] = noise_ch[mask_pos[0]-1]
                 noise_spectrum_new.append(noise_ch)
         else:
-            noise_spectrum_new = self._spec
+            noise_spectrum_new = self._spec.spec
 
         return TransientNoiseSpectrum(
             freq=self._spec.freq,
@@ -174,7 +175,7 @@ class CharacterizationNoise:
         )
 
     def extract_noise_rms(self) -> np.ndarray:
-        """Function for extracting the output effective noise voltage from the spectrum
+        """Function for extracting the output effective noise voltage from the total spectrum
         :return:        Numpy array with noise RMS of all channels
         """
         if len(self._channels) == 0:
@@ -190,7 +191,33 @@ class CharacterizationNoise:
             eff_noise_rms.append(noise_eff)
 
         eff_noise_rms = np.array(eff_noise_rms)
-        print(f"Available RMS noise [{unit}V]: {scale * eff_noise_rms}")
+        print(f"Available RMS noise [{unit}V]: {scale * eff_noise_rms} ({self._freq[1]}-{self._freq[-1]} Hz)")
+        print(f"Available RMS noise over all channels [{unit}V]: "
+              f"{np.mean(scale * eff_noise_rms)} +/- {np.std(scale * eff_noise_rms)} "
+              f"(num_channels={self.get_num_channels})")
+        return eff_noise_rms
+
+    def extract_noise_rms_specific(self, freq_start: float = 0., freq_stop: float = 1000.) -> np.ndarray:
+        """Function for extracting the output effective noise voltage from the specific range of the spectrum
+        :return:        Numpy array with noise RMS of all channels
+        """
+        if len(self._channels) == 0:
+            raise ValueError("Data is not loaded. Please load data first.")
+
+        scale, unit = scale_auto_value(self._spec.spec)
+        eff_noise_rms = list()
+
+        for f_ch, noise_ch in zip(self._spec.freq, self._spec.spec):
+            xstart = np.argwhere(f_ch >= freq_start).flatten()[0]
+            xstop = np.argwhere(f_ch >= freq_stop).flatten()[0]
+            noise_eff = np.sqrt(np.trapezoid(
+                y=noise_ch[xstart:xstop] ** 2,
+                x=f_ch[xstart:xstop],
+            ))
+            eff_noise_rms.append(noise_eff)
+
+        eff_noise_rms = np.array(eff_noise_rms)
+        print(f"Available RMS noise [{unit}V]: {scale * eff_noise_rms} ({freq_start}-{freq_stop} Hz)")
         print(f"Available RMS noise over all channels [{unit}V]: "
               f"{np.mean(scale * eff_noise_rms)} +/- {np.std(scale * eff_noise_rms)} "
               f"(num_channels={self.get_num_channels})")

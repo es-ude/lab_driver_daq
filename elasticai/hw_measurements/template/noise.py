@@ -5,7 +5,7 @@ from elasticai.hw_measurements.plots import plot_spectrum_noise, plot_transient_
 
 
 def extract_noise_metrics(data: TransientData, exclude_channels: list, path2file: Path,
-                          scale_adc: float=1.0, show_plots: bool=True) -> None:
+                          scale_adc: float=1.0, show_plots: bool=True) -> CharacterizationNoise:
     """Function for extracting the noise spectrum density and the output effect noise voltage from transient noise measurement from single file
     :param data:                Dataclass TransientData with results
     :param exclude_channels:    List with integers to exclude channels from analysis
@@ -31,6 +31,7 @@ def extract_noise_metrics(data: TransientData, exclude_channels: list, path2file
         tolerance=5.,
         num_harmonics=5
     )
+    dut.extract_noise_rms()
 
     # --- Plotting
     plot_transient_noise(
@@ -47,3 +48,4 @@ def extract_noise_metrics(data: TransientData, exclude_channels: list, path2file
         file_name=path2file.stem,
         show_plot=show_plots,
     )
+    return dut
