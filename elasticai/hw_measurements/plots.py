@@ -332,6 +332,8 @@ def plot_transient_noise(data: TransientData, offset: np.ndarray, scale: float=1
     else:
         plt.ylabel(f"Voltage output [{unit_y}V]", size=get_font_size())
     plt.xlim([data.timestamps[xzoom[0]], data.timestamps[xzoom[1]]])
+    plt.xticks(fontsize=get_font_size() - 1)
+    plt.yticks(fontsize=get_font_size() - 1)
     plt.legend(loc="upper left", fontsize=get_font_size())
     plt.grid(True)
     plt.tight_layout()

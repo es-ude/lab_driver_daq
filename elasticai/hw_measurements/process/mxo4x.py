@@ -50,17 +50,21 @@ def load_fra_data(path2file: Path, begin_line: int=2) -> FrequencyResponse:
     )
 
 
-def load_transient_data(path2file: Path, freq_ref: float) -> TransientData:
+def load_transient_data(path2file: Path) -> TransientData:
     data = list()
     chan = list()
+    samp_rate = 0.
     with h5py.File(path2file, 'r') as f:
-        groups = list(f['Waveforms'].keys())
-        for channel in groups:
+        key_channels = list(f['Waveforms'].keys())
+        # --- Getting sampling rate
+        for key, value in f['Waveforms'][key_channels[0]].attrs.items():
+            if key == "XInc":
+                samp_rate = 1 / float(value)
+        # --- Getting data
+        for channel in key_channels:
             data.append(f['Waveforms'][channel][f'{channel} Data'][...])
             chan.append(channel)
-
-    spectrum = do_fft(data[0], 1., 'Hamming')
-    samp_rate = float(freq_ref / spectrum.freq[np.argmax(spectrum.spec)] * spectrum.freq[-1])
+        f.close()
 
     data0 = np.array(data)
     if len(data0.shape) == 1:

@@ -56,8 +56,7 @@ def analyse_harmonic_mxo4(path: Path, subfolder_name: str, show_last_plot: bool=
     list_files = list((path / subfolder_name).glob('*.h5'))
     for file_sel in list_files:
         data_transient = load_transient_data(
-            path2file=file_sel,
-            freq_ref=500.
+            path2file=file_sel
         )
         plot_transient_data(
             data=data_transient,
